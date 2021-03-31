@@ -178,7 +178,7 @@ namespace AmiiboGameList
                                                 game.gameID = new List<string> { "01003FB00C5A8000" };
                                                 break;
                                             case "Shovel Knight Showdown":
-                                                game.gameID = new List<string> { "0100B380022AE00" };
+                                                game.gameID = new List<string> { "0100B380022AE000" };
                                                 break;
                                             default:
                                                 throw new Exception();
