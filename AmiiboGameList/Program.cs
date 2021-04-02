@@ -14,7 +14,7 @@ namespace AmiiboGameList
 {
     class Program
     {
-        private static readonly Lazy<DBRootobjectInstance> lazy = new (() => new DBRootobjectInstance());
+        private static readonly Lazy<DBRootobjectInstance> lazy = new(() => new DBRootobjectInstance());
 
         public static DBRootobjectInstance BRootobject { get { return lazy.Value; } }
 
@@ -69,7 +69,7 @@ namespace AmiiboGameList
                                                                 .Replace("yoshi's woolly world", "yoshi-s-woolly-world")
                                                                 .Replace("monster hunter stories rise", "monster-hunter-rise")
                                                                 .Trim().Replace(" ", "-").Replace("!", "").Replace(".", "") + "/";
-                url = url + Regex.Replace(DBamiibo.Value.name, @"[®™\n\u2122\-()!.]", "").Replace(" ", "-").Replace("--", "-").Replace("'", "-").ToLower()
+                url += Regex.Replace(DBamiibo.Value.name, @"[®™\n\u2122\-()!.]", "").Replace(" ", "-").Replace("--", "-").Replace("'", "-").ToLower()
                     .Replace("slider", "")
                     .Replace("8bit-link", "link-the-legend-of-zelda")
                     .Replace("8bit-mario-modern-color", "mario-modern-colors")
@@ -140,7 +140,7 @@ namespace AmiiboGameList
                     List<Game> consoleGames = new();
                     Parallel.ForEach(htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a"), node =>
                     {
-                        Game game = new Game
+                        Game game = new()
                         {
                             gameName = node.SelectSingleNode(".//*[@class='name']/text()[normalize-space()]").InnerText.Trim().Replace("Poochy & ", "").Trim().Replace("Ace Combat Assault Horizon Legacy +", "Ace Combat Assault Horizon Legacy+").Replace("Power Pros", "Jikkyou Powerful Pro Baseball"),
                             gameID = new List<string>(),
@@ -166,23 +166,14 @@ namespace AmiiboGameList
                                     List<SwitchreleasesRelease> games = SwitchGames.FindAll(SwitchGame => rgx.Replace(WebUtility.HtmlDecode(SwitchGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
                                     if (games.Count == 0)
                                     {
-                                        switch (game.gameName)
+                                        game.gameID = game.gameName switch
                                         {
-                                            case "Cyber Shadow":
-                                                game.gameID = new List<string> { "0100C1F0141AA000" };
-                                                break;
-                                            case "Jikkyou Powerful Pro Baseball":
-                                                game.gameID = new List<string> { "0100E9C00BF28000" };
-                                                break;
-                                            case "Super Kirby Clash":
-                                                game.gameID = new List<string> { "01003FB00C5A8000" };
-                                                break;
-                                            case "Shovel Knight Showdown":
-                                                game.gameID = new List<string> { "0100B380022AE000" };
-                                                break;
-                                            default:
-                                                throw new Exception();
-                                        }
+                                            "Cyber Shadow" => new List<string> { "0100C1F0141AA000" },
+                                            "Jikkyou Powerful Pro Baseball" => new List<string> { "0100E9C00BF28000" },
+                                            "Super Kirby Clash" => new List<string> { "01003FB00C5A8000" },
+                                            "Shovel Knight Showdown" => new List<string> { "0100B380022AE000" },
+                                            _ => throw new Exception(),
+                                        };
                                     }
                                     games.ForEach(SwitchGame =>
                                         game.gameID.Add(SwitchGame.titleid.Substring(0, 16)));
@@ -202,11 +193,7 @@ namespace AmiiboGameList
                                     string[] gameIDs = WiiUGames.Find(WiiUGame => WiiUGame.Name.Contains(game.gameName, StringComparer.OrdinalIgnoreCase)).Ids;
                                     if (gameIDs.Length == 0)
                                     {
-                                        switch (game.gameName)
-                                        {
-                                            default:
-                                                throw new Exception();
-                                        }
+                                        throw new Exception();
                                     }
                                     foreach (string ID in gameIDs)
                                     {
@@ -227,38 +214,19 @@ namespace AmiiboGameList
                                     List<DSreleasesRelease> games = DSGames.FindAll(DSGame => rgx.Replace(WebUtility.HtmlDecode(DSGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
                                     if (games.Count == 0)
                                     {
-                                        switch (game.gameName)
+                                        game.gameID = game.gameName switch
                                         {
-                                            case "Style Savvy: Styling Star":
-                                                game.gameID = new List<string> { "00040000001C2500" };
-                                                break;
-                                            case "Metroid Prime: Blast Ball":
-                                                game.gameID = new List<string> { "0004000000175300" };
-                                                break;
-                                            case "Mini Mario & Friends amiibo Challenge":
-                                                game.gameID = new List<string> { "000400000016C300", "000400000016C200" };
-                                                break;
-                                            case "Team Kirby Clash Deluxe":
-                                                game.gameID = new List<string> { "00040000001AB900", "00040000001AB800" };
-                                                break;
-                                            case "Kirby's Extra Epic Yarn":
-                                                game.gameID = new List<string> { "00040000001D1F00" };
-                                                break;
-                                            case "Kirby's Blowout Blast":
-                                                game.gameID = new List<string> { "0004000000196F00" };
-                                                break;
-                                            case "BYE-BYE BOXBOY!":
-                                                game.gameID = new List<string> { "00040000001B5400", "00040000001B5300" };
-                                                break;
-                                            case "Azure Striker Gunvolt 2":
-                                                game.gameID = new List<string> { "00040000001A6E00" };
-                                                break;
-                                            case "niconico app":
-                                                game.gameID = new List<string> { "0005000010116400" };
-                                                break;
-                                            default:
-                                                throw new Exception();
-                                        }
+                                            "Style Savvy: Styling Star" => new List<string> { "00040000001C2500" },
+                                            "Metroid Prime: Blast Ball" => new List<string> { "0004000000175300" },
+                                            "Mini Mario & Friends amiibo Challenge" => new List<string> { "000400000016C300", "000400000016C200" },
+                                            "Team Kirby Clash Deluxe" => new List<string> { "00040000001AB900", "00040000001AB800" },
+                                            "Kirby's Extra Epic Yarn" => new List<string> { "00040000001D1F00" },
+                                            "Kirby's Blowout Blast" => new List<string> { "0004000000196F00" },
+                                            "BYE-BYE BOXBOY!" => new List<string> { "00040000001B5400", "00040000001B5300" },
+                                            "Azure Striker Gunvolt 2" => new List<string> { "00040000001A6E00" },
+                                            "niconico app" => new List<string> { "0005000010116400" },
+                                            _ => throw new Exception(),
+                                        };
                                     }
                                     games.ForEach(DSGame =>
                                         game.gameID.Add(DSGame.titleid.Substring(0, 16)));
