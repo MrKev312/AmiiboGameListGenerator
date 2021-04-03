@@ -50,7 +50,7 @@ namespace AmiiboGameList
             byteArray = Encoding.UTF8.GetBytes(client.DownloadString(@"http://nswdb.com/xml.php"));
             stream = new MemoryStream(byteArray);
             List<SwitchreleasesRelease> SwitchGames = ((Switchreleases)serializer.Deserialize(stream)).release.ToList();
-            stream.DisposeAsync();
+            stream.Dispose();
 
             Parallel.ForEach(BRootobject.rootobject.amiibos, DBamiibo =>
             {
