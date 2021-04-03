@@ -50,7 +50,7 @@ namespace AmiiboGameList
             byteArray = Encoding.UTF8.GetBytes(client.DownloadString(@"http://nswdb.com/xml.php"));
             stream = new MemoryStream(byteArray);
             List<SwitchreleasesRelease> SwitchGames = ((Switchreleases)serializer.Deserialize(stream)).release.ToList();
-            stream.Close();
+            stream.DisposeAsync();
 
             Parallel.ForEach(BRootobject.rootobject.amiibos, DBamiibo =>
             {
@@ -127,9 +127,12 @@ namespace AmiiboGameList
                             AmiiboClient.DownloadString(url)
                             )
                         );
+
+                    // Dispose of the WebClient because we don't need it anymore
+                    AmiiboClient.Dispose();
                     try
                     {
-                        htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a").First();
+                        _ = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a").First();
                     }
                     catch
                     {
@@ -252,7 +255,17 @@ namespace AmiiboGameList
                 }
                 export.amiibos.Add(DBamiibo.Key, ExAmiibo);
             });
-            File.WriteAllText("./games_info.json", JsonConvert.SerializeObject(export, Formatting.Indented), Encoding.UTF8);
+
+            //Sort everything
+            Hex[] KeyArray = export.amiibos.Keys.ToArray();
+            Array.Sort(KeyArray);
+            Dictionary<Hex, Games> SortedAmiibos = new();
+            foreach (var key in KeyArray)
+            {
+                SortedAmiibos.Add(key, export.amiibos[key]);
+            }
+
+            File.WriteAllText("./games_info.json", JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented), Encoding.UTF8);
         }
     }
 }

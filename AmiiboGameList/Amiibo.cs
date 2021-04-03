@@ -7,7 +7,7 @@ namespace AmiiboGameList
 
     public class AmiiboKeyValue
     {
-        public Dictionary<string, Games> amiibos = new();
+        public Dictionary<Hex, Games> amiibos = new();
     }
 
     public class DBRootobjectInstance
@@ -18,7 +18,7 @@ namespace AmiiboGameList
     public class DBRootobject
     {
         public Dictionary<string, string> amiibo_series = new();
-        public Dictionary<string, DBAmiibo> amiibos = new();
+        public Dictionary<Hex, DBAmiibo> amiibos = new();
         public Dictionary<string, string> characters = new();
         public Dictionary<string, string> game_series = new();
         public Dictionary<string, string> types = new();
@@ -26,17 +26,15 @@ namespace AmiiboGameList
 
     public class DBAmiibo
     {
-        private string iD;
         public string name;
         public Release release;
-
-        public string ID { get => iD; set => iD = value.Replace("0x", ""); }
+        public Hex ID;
 
         public string characterName
         {
             get
             {
-                string CharacterName = Program.BRootobject.rootobject.characters["0x" + iD.Substring(0, 4)];
+                string CharacterName = Program.BRootobject.rootobject.characters["0x" + ID.ToString().ToLower().Substring(2, 4)];
                 switch (CharacterName)
                 {
                     case "Spork/Crackle":
@@ -56,16 +54,16 @@ namespace AmiiboGameList
         {
             get
             {
-                string ID = "0x" + iD.Substring(12, 2);
-                string AmiiboSeries = Program.BRootobject.rootobject.amiibo_series[ID];
-                return AmiiboSeries;
+                    string ID = "0x" + this.ID.ToString().Substring(14, 2);
+                    string AmiiboSeries = Program.BRootobject.rootobject.amiibo_series[ID.ToLower()];
+                    return AmiiboSeries;
             }
         }
         public string type
         {
             get
             {
-                string Type = Program.BRootobject.rootobject.types["0x" + iD.Substring(6, 2)];
+                string Type = Program.BRootobject.rootobject.types["0x" + ID.ToString().Substring(8, 2)];
                 return Type;
             }
         }
