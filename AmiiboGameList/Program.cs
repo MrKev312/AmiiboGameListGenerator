@@ -130,18 +130,16 @@ namespace AmiiboGameList
 
                     // Dispose of the WebClient because we don't need it anymore
                     AmiiboClient.Dispose();
-                    try
-                    {
-                        _ = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a").First();
-                    }
-                    catch
+
+                    HtmlNodeCollection GamesPanel = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a");
+                    if(GamesPanel.Count == 0)
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.WriteLine("No games found for " + DBamiibo.Value.name);
                         return;
                     }
                     List<Game> consoleGames = new();
-                    Parallel.ForEach(htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a"), node =>
+                    Parallel.ForEach(GamesPanel, node =>
                     {
                         Game game = new()
                         {
@@ -253,6 +251,12 @@ namespace AmiiboGameList
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(url);
                 }
+
+                ExAmiibo.gamesSwitch.Sort();
+                ExAmiibo.gamesWiiU.Sort();
+                ExAmiibo.games3DS.Sort();
+
+
                 export.amiibos.Add(DBamiibo.Key, ExAmiibo);
             });
 
