@@ -63,7 +63,7 @@ namespace AmiiboGameList
         public override object ConvertTo(ITypeDescriptorContext context,
         CultureInfo culture, object value, Type destinationType)
         {
-            if (destinationType == typeof(string)) { Console.WriteLine(((Hex)value).ToString());  return ((Hex)value).ToString(); }
+            if (destinationType == typeof(string)) { return ((Hex)value).ToString(); }
             return base.ConvertTo(context, culture, value, destinationType);
         }
     }
