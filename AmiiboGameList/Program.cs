@@ -246,10 +246,11 @@ namespace AmiiboGameList
                         }
                     });
                 }
-                catch
+                catch (Exception e)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(url);
+                    Console.WriteLine(e);
                 }
 
                 ExAmiibo.gamesSwitch.Sort();
