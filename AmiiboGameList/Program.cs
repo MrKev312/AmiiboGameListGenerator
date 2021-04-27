@@ -20,16 +20,15 @@ namespace AmiiboGameList
 
         static void Main()
         {
+            // Check if amiibo.json is provided
             if (!File.Exists("amiibo.json"))
             {
                 Console.WriteLine("Download and place the amiibo.json in the same folder as this exe");
                 Console.ReadKey();
                 return;
             }
-            Regex rgx = new("[^a-zA-Z0-9 -]");
-            // Amiibo data
-            WebClient client = new();
-            client.Encoding = Encoding.UTF8;
+
+            // Load Amiibo data
             BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(".\\amiibo.json").Trim());
             AmiiboKeyValue export = new();
 
@@ -37,51 +36,41 @@ namespace AmiiboGameList
             {
                 entry.Value.ID = entry.Key;
             }
-            // Wii U
+
+            // Load Wii U games
             List<GameInfo> WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
-            // 3DS
+
+            // Load 3DS games
             XmlSerializer serializer = new(typeof(DSreleases));
             byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
             MemoryStream stream = new(byteArray);
             List<DSreleasesRelease> DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
             stream.Close();
-            // Switch
+
+            // Load Switch games
+            WebClient client = new();
+            client.Encoding = Encoding.UTF8;
             serializer = new XmlSerializer(typeof(Switchreleases));
             byteArray = Encoding.UTF8.GetBytes(client.DownloadString(@"http://nswdb.com/xml.php"));
             stream = new MemoryStream(byteArray);
             List<SwitchreleasesRelease> SwitchGames = ((Switchreleases)serializer.Deserialize(stream)).release.ToList();
             stream.Dispose();
 
+            // Iterate over all Amiibo's and get game info
             Parallel.ForEach(BRootobject.rootobject.amiibos, DBamiibo =>
             {
                 WebClient AmiiboClient = new();
                 Games ExAmiibo = new();
-                ExAmiibo.gamesSwitch = new List<Game>();
-                ExAmiibo.games3DS = new List<Game>();
-                ExAmiibo.gamesWiiU = new List<Game>();
-                string url = "";
-                url = "https://amiibo.life/amiibo/" + DBamiibo.Value.amiiboSeries.ToLower()
-                                                                .Replace("super mario bros", "super mario")
-                                                                .Replace("monster hunter", "monster hunter stories")
-                                                                .Replace("legend of zelda", "the legend of zelda")
-                                                                .Replace("skylanders", "skylanders superchargers")
-                                                                .Replace("8-bit mario", "super-mario-bros-30th-anniversary")
-                                                                .Replace("yoshi's woolly world", "yoshi-s-woolly-world")
-                                                                .Replace("monster hunter stories rise", "monster-hunter-rise")
-                                                                .Trim().Replace(" ", "-").Replace("!", "").Replace(".", "") + "/";
-                url += Regex.Replace(DBamiibo.Value.name, @"[®™\n\u2122\-()!.]", "").Replace(" ", "-").Replace("--", "-").Replace("'", "-").ToLower()
-                    .Replace("slider", "")
-                    .Replace("8bit-link", "link-the-legend-of-zelda")
-                    .Replace("8bit-mario-modern-color", "mario-modern-colors")
-                    .Replace("midna-&-wolf-link", "wolf-link")
-                    .Replace("mr-game-&-watch", "mr-game-watch")
-                    .Replace("oneeyed", "one-eyed")
-                    .Replace("pacman", "pac-man")
-                    .Replace("rob-nes", "r-o-b-nes")
-                    .Replace("rob-famicom", "r-o-b-famicom")
-                    .Replace("-&-luma", "")
-                    .Replace("k-k-", "k-k")
-                    .Replace("timmy-&-tommy", "timmy-tommy")
+                string GameSeriesURL = DBamiibo.Value.amiiboSeries.ToLower();
+
+                // Regex to cleanup url
+                GameSeriesURL = Regex.Replace(GameSeriesURL, @"[!.]", "");
+                GameSeriesURL = Regex.Replace(GameSeriesURL, @"[' ]", "-");
+
+
+                string url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/";
+                
+                url += Regex.Replace(DBamiibo.Value.Name, @"[®™\n\u2122\-()!.]", "").Replace(" ", "-").Replace("--", "-").Replace("'", "-").ToLower()
                     .Replace("toon-zelda-the-wind-waker", "zelda-the-wind-waker").Trim().Replace(" ", "-")
                     .Replace("8bit-mario-classic-color", "mario-classic-colors")
                     .Replace("banjo-&-kazooie", "banjo-kazooie");
@@ -135,7 +124,7 @@ namespace AmiiboGameList
                     if(GamesPanel.Count == 0)
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine("No games found for " + DBamiibo.Value.name);
+                        Console.WriteLine("No games found for " + DBamiibo.Value.Name);
                         return;
                     }
                     List<Game> consoleGames = new();
@@ -157,8 +146,10 @@ namespace AmiiboGameList
                             });
                         }
 
-                        if (DBamiibo.Value.name == "Shadow Mewtwo")
+                        if (DBamiibo.Value.Name == "Shadow Mewtwo")
                             game.gameName = "Pokkén Tournament";
+
+                        Regex rgx = new("[^a-zA-Z0-9 -]");
                         switch (node.SelectSingleNode(".//*[@class='name']/span").InnerText.Trim().ToLower())
                         {
                             case "switch":

@@ -26,9 +26,29 @@ namespace AmiiboGameList
 
     public class DBAmiibo
     {
-        public string name;
+        private string name;
         public Release release;
         public Hex ID;
+
+        public string Name {
+            get
+            {
+                return name switch
+                {
+                    "8-Bit Link" => "Link The Legend of Zelda",
+                    "8-Bit Mario Classic Color" => "Mario Classic Colors",
+                    "8-bit Mario Modern Color" => "Super Modern Colors",
+                    "Midna & Wolf Link" => "Wolf Link",
+                    "Rosalina & Luma" => "Rosalina",
+                    _ => name
+                };
+                if (name.Contains("Slider"))
+                    return name.Replace("Slider", "");
+                if (name.Contains(" & "))
+                    return name.Replace(" & ", " ");
+                return name;
+            }
+        }
 
         public string characterName
         {
@@ -54,9 +74,19 @@ namespace AmiiboGameList
         {
             get
             {
-                    string ID = "0x" + this.ID.ToString().Substring(14, 2);
-                    string AmiiboSeries = Program.BRootobject.rootobject.amiibo_series[ID.ToLower()];
-                    return AmiiboSeries;
+                string ID = "0x" + this.ID.ToString().Substring(14, 2);
+                string AmiiboSeries = Program.BRootobject.rootobject.amiibo_series[ID.ToLower()];
+
+                return AmiiboSeries switch
+                {
+                    "Super Mario Bros." => "Super Mario",
+                    "Monster Hunter" => "Monster Hunter Stories",
+                    "Legend Of Zelda" => "The Legend Of Zelda",
+                    "Skylanders" => "Skylander Superchargers",
+                    "8-bit Mario" => "Super Mario Bros 30th Anniversary",
+                    "Monster Sunter Stories Rise" => "Monster Hunter Rise",
+                    _ => AmiiboSeries,
+                };
             }
         }
         public string type
@@ -71,6 +101,13 @@ namespace AmiiboGameList
 
     public class Games
     {
+        public Games()
+        {
+            games3DS = new();
+            gamesWiiU = new();
+            gamesSwitch = new();
+        }
+
         public List<Game> games3DS { get; set; }
         public List<Game> gamesWiiU { get; set; }
         public List<Game> gamesSwitch { get; set; }
