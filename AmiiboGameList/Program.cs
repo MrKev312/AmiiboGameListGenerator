@@ -56,6 +56,12 @@ namespace AmiiboGameList
             List<SwitchreleasesRelease> SwitchGames = ((Switchreleases)serializer.Deserialize(stream)).release.ToList();
             stream.Dispose();
 
+            // List to keep track of missing games
+            List<string> missingGames = new();
+
+            // Counter to keep track of how many amiibos we've done
+            int AmiiboCounter = 0;
+
             // Iterate over all Amiibo's and get game info
             Parallel.ForEach(BRootobject.rootobject.amiibos, DBamiibo =>
             {
@@ -67,24 +73,26 @@ namespace AmiiboGameList
                 GameSeriesURL = Regex.Replace(GameSeriesURL, @"[!.]", "");
                 GameSeriesURL = Regex.Replace(GameSeriesURL, @"[' ]", "-");
 
+                // Start making the url
+                string url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/{ DBamiibo.Value.Name.Replace(" ", "-").ToLower() }";
 
-                string url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/";
-                
-                url += Regex.Replace(DBamiibo.Value.Name, @"[®™\n\u2122\-()!.]", "").Replace(" ", "-").Replace("--", "-").Replace("'", "-").ToLower()
-                    .Replace("toon-zelda-the-wind-waker", "zelda-the-wind-waker").Trim().Replace(" ", "-")
-                    .Replace("8bit-mario-classic-color", "mario-classic-colors")
-                    .Replace("banjo-&-kazooie", "banjo-kazooie");
+                // Handle cat in getter for name
                 if (url.EndsWith("cat"))
                     url = url.Insert(url.LastIndexOf('/') + 1, "cat-").Substring(0, url.Length);
+
+                // If the amiibo is an animal crossing card, look name up on site and get the first link
+                // TODO: error if no link is found
                 if (DBamiibo.Value.type == "Card" && DBamiibo.Value.amiiboSeries == "Animal Crossing")
                 {
-                    url = null;
+                    // Look amiibo up
                     HtmlDocument htmlDoc = new();
                     htmlDoc.LoadHtml(
                         WebUtility.HtmlDecode(
                             AmiiboClient.DownloadString("https://amiibo.life/search?q=" + DBamiibo.Value.characterName)
                             )
                         );
+
+                    // Filter for card amiibos only and get url
                     foreach (var item in htmlDoc.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
                     {
                         if (item.ChildNodes[1].GetAttributeValue("href", string.Empty).Contains("cards"))
@@ -94,6 +102,9 @@ namespace AmiiboGameList
                         }
                     }
                 }
+
+                // Handle amiibos where gameseries is set to others
+                // TODO: fix Isabelle--Winter
                 switch (url)
                 {
                     case "https://amiibo.life/amiibo/others/super-mario-cereal":
@@ -120,16 +131,19 @@ namespace AmiiboGameList
                     // Dispose of the WebClient because we don't need it anymore
                     AmiiboClient.Dispose();
 
+                    // Get the games panel
                     HtmlNodeCollection GamesPanel = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a");
-                    if(GamesPanel.Count == 0)
+                    if (GamesPanel.Count == 0)
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine("No games found for " + DBamiibo.Value.Name);
                         return;
                     }
-                    List<Game> consoleGames = new();
+
+                    // Iterate over each game in the games panel
                     Parallel.ForEach(GamesPanel, node =>
                     {
+                        // Get the name of the game
                         Game game = new()
                         {
                             gameName = node.SelectSingleNode(".//*[@class='name']/text()[normalize-space()]").InnerText.Trim().Replace("Poochy & ", "").Trim().Replace("Ace Combat Assault Horizon Legacy +", "Ace Combat Assault Horizon Legacy+").Replace("Power Pros", "Jikkyou Powerful Pro Baseball"),
@@ -137,6 +151,7 @@ namespace AmiiboGameList
                             amiiboUsage = new List<AmiiboUsage>()
                         };
 
+                        // Get the amiibo usages
                         foreach (var amiiboUsage in node.SelectNodes(".//*[@class='features']/li"))
                         {
                             game.amiiboUsage.Add(new AmiiboUsage
@@ -149,6 +164,7 @@ namespace AmiiboGameList
                         if (DBamiibo.Value.Name == "Shadow Mewtwo")
                             game.gameName = "Pokkén Tournament";
 
+                        // Add game to the correct console and get correct titleid
                         Regex rgx = new("[^a-zA-Z0-9 -]");
                         switch (node.SelectSingleNode(".//*[@class='name']/span").InnerText.Trim().ToLower())
                         {
@@ -175,8 +191,7 @@ namespace AmiiboGameList
                                 }
                                 catch
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Yellow;
-                                    Console.WriteLine("Game not found: " + game.gameName + " (Switch)");
+                                    missingGames.Add(game.gameName + " (Switch)");
                                 }
                                 break;
                             case "wii u":
@@ -196,8 +211,7 @@ namespace AmiiboGameList
                                 }
                                 catch
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Yellow;
-                                    Console.WriteLine("Game not found: " + game.gameName + " (Wii U)");
+                                    missingGames.Add(game.gameName + " (Wii U)");
                                 }
                                 break;
                             case "3ds":
@@ -228,8 +242,7 @@ namespace AmiiboGameList
                                 }
                                 catch
                                 {
-                                    Console.ForegroundColor = ConsoleColor.Yellow;
-                                    Console.WriteLine("Game not found: " + game.gameName + " (3DS)");
+                                    missingGames.Add(game.gameName + " (3DS)");
                                 }
                                 break;
                             default:
@@ -244,15 +257,21 @@ namespace AmiiboGameList
                     Console.WriteLine(e);
                 }
 
+                // Sort all gamelists
                 ExAmiibo.gamesSwitch.Sort();
                 ExAmiibo.gamesWiiU.Sort();
                 ExAmiibo.games3DS.Sort();
 
-
+                // Add the amiibos to the export list
                 export.amiibos.Add(DBamiibo.Key, ExAmiibo);
+
+                // Show which amiibo just got added
+                Console.ForegroundColor = ConsoleColor.White;
+                AmiiboCounter++;
+                Console.WriteLine($"{ AmiiboCounter }/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })");
             });
 
-            //Sort everything
+            // Sort everything
             Hex[] KeyArray = export.amiibos.Keys.ToArray();
             Array.Sort(KeyArray);
             Dictionary<Hex, Games> SortedAmiibos = new();
@@ -261,7 +280,22 @@ namespace AmiiboGameList
                 SortedAmiibos.Add(key, export.amiibos[key]);
             }
 
+            // Write the file
             File.WriteAllText("./games_info.json", JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented), Encoding.UTF8);
+
+            // Inform we're done
+            Console.WriteLine("\nDone generating the JSON!");
+
+            // Show missing games
+            if(missingGames.Count != 0)
+            {
+                Console.WriteLine("However, the following games were missing:");
+                foreach (var Game in missingGames.Distinct())
+                {
+                    Console.WriteLine("\t" + Game);
+                }
+            }
+
         }
     }
 }

@@ -26,28 +26,36 @@ namespace AmiiboGameList
 
     public class DBAmiibo
     {
-        private string name;
+        public string OriginalName;
         public Release release;
         public Hex ID;
 
         public string Name {
             get
             {
-                return name switch
+                string ReturnName = OriginalName switch
                 {
                     "8-Bit Link" => "Link The Legend of Zelda",
                     "8-Bit Mario Classic Color" => "Mario Classic Colors",
-                    "8-bit Mario Modern Color" => "Super Modern Colors",
+                    "8-Bit Mario Modern Color" => "Mario Modern Colors",
                     "Midna & Wolf Link" => "Wolf Link",
+                    "Toon Zelda - The Wind Waker" => "Zelda The Wind Waker",
                     "Rosalina & Luma" => "Rosalina",
-                    _ => name
+                    _ => OriginalName
                 };
-                if (name.Contains("Slider"))
-                    return name.Replace("Slider", "");
-                if (name.Contains(" & "))
-                    return name.Replace(" & ", " ");
-                return name;
+
+                ReturnName = ReturnName.Replace("Slider", "");
+                ReturnName = ReturnName.Replace("R.O.B.", "R O B");
+
+                ReturnName = ReturnName.Replace(".", "");
+                ReturnName = ReturnName.Replace("'", " ");
+
+                ReturnName = ReturnName.Replace(" & ", " ");
+                ReturnName = ReturnName.Replace(" - ", " ");
+
+                return ReturnName.Trim();
             }
+            set => OriginalName = value;
         }
 
         public string characterName
@@ -82,7 +90,7 @@ namespace AmiiboGameList
                     "Super Mario Bros." => "Super Mario",
                     "Monster Hunter" => "Monster Hunter Stories",
                     "Legend Of Zelda" => "The Legend Of Zelda",
-                    "Skylanders" => "Skylander Superchargers",
+                    "Skylanders" => "Skylanders Superchargers",
                     "8-bit Mario" => "Super Mario Bros 30th Anniversary",
                     "Monster Sunter Stories Rise" => "Monster Hunter Rise",
                     _ => AmiiboSeries,
