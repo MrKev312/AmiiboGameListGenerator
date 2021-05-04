@@ -77,6 +77,7 @@ namespace AmiiboGameList
                 string url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/{ DBamiibo.Value.Name.Replace(" ", "-").ToLower() }";
 
                 // Handle cat in getter for name
+                // TODO: move to Amiibo.cs
                 if (url.EndsWith("cat"))
                     url = url.Insert(url.LastIndexOf('/') + 1, "cat-").Substring(0, url.Length);
 
@@ -104,7 +105,6 @@ namespace AmiiboGameList
                 }
 
                 // Handle amiibos where gameseries is set to others
-                // TODO: fix Isabelle--Winter
                 switch (url)
                 {
                     case "https://amiibo.life/amiibo/others/super-mario-cereal":
@@ -113,9 +113,6 @@ namespace AmiiboGameList
 
                     case "https://amiibo.life/amiibo/others/solaire-of-astora":
                         url = "https://amiibo.life/amiibo/dark-souls/solaire-of-astora";
-                        break;
-                    case "https://amiibo.life/amiibo/animal-crossing/isabelle--winter":
-                        url = "https://amiibo.life/amiibo/animal-crossing/isabelle-winter-outfit";
                         break;
                 }
                 try
