@@ -267,7 +267,7 @@ namespace AmiiboGameList
                 // Show which amiibo just got added
                 Console.ForegroundColor = ConsoleColor.White;
                 AmiiboCounter++;
-                Console.WriteLine($"{ AmiiboCounter.ToString("D3") }/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })");
+                Console.WriteLine($"{ AmiiboCounter:D3}/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })");
             });
 
             // Sort everything
