@@ -227,7 +227,7 @@ namespace AmiiboGameList
                                             "Kirby's Blowout Blast" => new List<string> { "0004000000196F00" },
                                             "BYE-BYE BOXBOY!" => new List<string> { "00040000001B5400", "00040000001B5300" },
                                             "Azure Striker Gunvolt 2" => new List<string> { "00040000001A6E00" },
-                                            "NicoNico app" => new List<string> { "0005000010116400" },
+                                            "niconico app" => new List<string> { "0005000010116400" },
                                             _ => throw new Exception(),
                                         };
                                     }
