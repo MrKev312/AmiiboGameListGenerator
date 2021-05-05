@@ -250,8 +250,10 @@ namespace AmiiboGameList
                 catch (Exception e)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(url);
-                    Console.WriteLine(e);
+                    Console.WriteLine(
+                        $"Error caught, press any key to continue:\n" +
+                        $"{url}\n\t" +
+                        $"{ e }");
                 }
 
                 // Sort all gamelists
