@@ -30,7 +30,7 @@ namespace AmiiboGameList
 
             // Load Amiibo data
             BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(".\\amiibo.json").Trim());
-            AmiiboKeyValue export = new();
+            Dictionary<Hex, Games> export = new();
 
             foreach (var entry in BRootobject.rootobject.amiibos)
             {
@@ -262,7 +262,7 @@ namespace AmiiboGameList
                 ExAmiibo.games3DS.Sort();
 
                 // Add the amiibos to the export list
-                export.amiibos.Add(DBamiibo.Key, ExAmiibo);
+                export.Add(DBamiibo.Key, ExAmiibo);
 
                 // Show which amiibo just got added
                 Console.ForegroundColor = ConsoleColor.White;
@@ -271,12 +271,12 @@ namespace AmiiboGameList
             });
 
             // Sort everything
-            Hex[] KeyArray = export.amiibos.Keys.ToArray();
+            Hex[] KeyArray = export.Keys.ToArray();
             Array.Sort(KeyArray);
-            Dictionary<Hex, Games> SortedAmiibos = new();
+            AmiiboKeyValue SortedAmiibos = new();
             foreach (var key in KeyArray)
             {
-                SortedAmiibos.Add(key, export.amiibos[key]);
+                SortedAmiibos.amiibos.Add(key, export[key]);
             }
 
             // Write the file
