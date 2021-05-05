@@ -23,7 +23,7 @@ namespace AmiiboGameList
         }
         public override string ToString()
         {
-            return "0x" + HexValue.ToString("X16");
+            return "0x" + HexValue.ToString("x16");
         }
     }
 
