@@ -14,10 +14,24 @@ namespace AmiiboGameList
 {
     class Program
     {
+        /// <summary>
+        /// The lazy instance of the AmiiboDataBase
+        /// </summary>
         private static readonly Lazy<DBRootobjectInstance> lazy = new(() => new DBRootobjectInstance());
 
+        /// <summary>
+        /// Gets the instance of the AmiiboDataBase.
+        /// </summary>
+        /// <value>
+        /// The instance of the AmiiboDataBase.
+        /// </value>
         public static DBRootobjectInstance BRootobject { get { return lazy.Value; } }
 
+        /// <summary>
+        /// Mains this instance.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
         static void Main()
         {
             // Check if amiibo.json is provided

@@ -1,276 +1,55 @@
 ﻿namespace AmiiboGameList
 {
-
-    // NOTE: Generated code may require at least .NET Framework 4.5 or .NET Core/Standard 2.0.
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    /// <summary>Class containing an array of 3DS games</summary>
+    [System.Serializable()]
+    [System.ComponentModel.DesignerCategory("code")]
     [System.Xml.Serialization.XmlRoot("releases")]
-    public partial class Switchreleases
+    public class Switchreleases
     {
 
         private SwitchreleasesRelease[] releaseField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute("release")]
+        /// <summary>Gets or sets the games.</summary>
+        /// <value>The release array.</value>
+        [System.Xml.Serialization.XmlElement("release")]
         public SwitchreleasesRelease[] release
         {
-            get
-            {
-                return this.releaseField;
-            }
-            set
-            {
-                this.releaseField = value;
-            }
+            get => releaseField; set => releaseField = value;
         }
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true)]
-    public partial class SwitchreleasesRelease
+    /// <summary>Class for each Switch game.</summary>
+    [System.Serializable()]
+    [System.ComponentModel.DesignerCategory("code")]
+    [System.Xml.Serialization.XmlType(AnonymousType = true)]
+    public class SwitchreleasesRelease
     {
 
         private ushort idField;
 
         private string nameField;
 
-        private string publisherField;
-
-        private string regionField;
-
-        private string languagesField;
-
-        private string groupField;
-
-        private byte imagesizeField;
-
-        private string serialField;
-
         private string titleidField;
 
-        private string imgcrcField;
-
-        private string filenameField;
-
-        private string releasenameField;
-
-        private ulong trimmedsizeField;
-
-        private string firmwareField;
-
-        private byte typeField;
-
-        private string cardField;
-
-        /// <remarks/>
+        /// <summary>Gets or sets the identifier of the game.</summary>
+        /// <value>The identifier.</value>
         public ushort id
         {
-            get
-            {
-                return this.idField;
-            }
-            set
-            {
-                this.idField = value;
-            }
+            get => idField; set => idField = value;
         }
 
-        /// <remarks/>
+        /// <summary>Gets or sets the name.</summary>
+        /// <value>The name of the game.</value>
         public string name
         {
-            get
-            {
-                return this.nameField;
-            }
-            set
-            {
-                this.nameField = value;
-            }
+            get => nameField; set => nameField = value;
         }
 
-        /// <remarks/>
-        public string publisher
-        {
-            get
-            {
-                return this.publisherField;
-            }
-            set
-            {
-                this.publisherField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string region
-        {
-            get
-            {
-                return this.regionField;
-            }
-            set
-            {
-                this.regionField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string languages
-        {
-            get
-            {
-                return this.languagesField;
-            }
-            set
-            {
-                this.languagesField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string group
-        {
-            get
-            {
-                return this.groupField;
-            }
-            set
-            {
-                this.groupField = value;
-            }
-        }
-
-        /// <remarks/>
-        public byte imagesize
-        {
-            get
-            {
-                return this.imagesizeField;
-            }
-            set
-            {
-                this.imagesizeField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string serial
-        {
-            get
-            {
-                return this.serialField;
-            }
-            set
-            {
-                this.serialField = value;
-            }
-        }
-
-        /// <remarks/>
+        /// <summary>Gets or sets the titleid.</summary>
+        /// <value>The titleid of the game.</value>
         public string titleid
         {
-            get
-            {
-                return this.titleidField;
-            }
-            set
-            {
-                this.titleidField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string imgcrc
-        {
-            get
-            {
-                return this.imgcrcField;
-            }
-            set
-            {
-                this.imgcrcField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string filename
-        {
-            get
-            {
-                return this.filenameField;
-            }
-            set
-            {
-                this.filenameField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string releasename
-        {
-            get
-            {
-                return this.releasenameField;
-            }
-            set
-            {
-                this.releasenameField = value;
-            }
-        }
-
-        /// <remarks/>
-        public ulong trimmedsize
-        {
-            get
-            {
-                return this.trimmedsizeField;
-            }
-            set
-            {
-                this.trimmedsizeField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string firmware
-        {
-            get
-            {
-                return this.firmwareField;
-            }
-            set
-            {
-                this.firmwareField = value;
-            }
-        }
-
-        /// <remarks/>
-        public byte type
-        {
-            get
-            {
-                return this.typeField;
-            }
-            set
-            {
-                this.typeField = value;
-            }
-        }
-
-        /// <remarks/>
-        public string card
-        {
-            get
-            {
-                return this.cardField;
-            }
-            set
-            {
-                this.cardField = value;
-            }
+            get => titleidField; set => titleidField = value;
         }
     }
 
