@@ -293,17 +293,8 @@ namespace AmiiboGameList
                 SortedAmiibos.amiibos.Add(key, export[key]);
             }
 
-            // Set up the JsonTextWriter to use indented tabs
-            JsonTextWriter Writer = new(new StreamWriter(File.Create("./games_info.json")))
-            {
-                Formatting = Formatting.Indented,
-                IndentChar = '\t',
-                Indentation = 1,
-                
-            };
-
-            // Write the file
-            new JsonSerializer().Serialize(Writer, SortedAmiibos);
+            //// Write the SortedAmiibos to file as an tab-indented json
+            File.WriteAllText("./games_info.json", JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented).Replace("  ", "\t"));
 
             // Inform we're done
             Console.WriteLine("\nDone generating the JSON!");
