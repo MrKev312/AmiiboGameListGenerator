@@ -302,7 +302,7 @@ namespace AmiiboGameList
             // Show missing games
             if(missingGames.Count != 0)
             {
-                Console.WriteLine("However, the following games could not be added to the database:");
+                Console.WriteLine("However, the following games couldn't find their titleids and thus couldn't be added:");
                 foreach (var Game in missingGames.Distinct())
                 {
                     Console.WriteLine("\t" + Game);
