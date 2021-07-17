@@ -44,6 +44,7 @@ namespace AmiiboGameList
                     "Midna & Wolf Link" => "Wolf Link",
                     "Toon Zelda - The Wind Waker" => "Zelda The Wind Waker",
                     "Rosalina & Luma" => "Rosalina",
+                    "Zelda & Loftwing" => "Zelda & Loftwing - Skyward Sword",
                     _ => OriginalName
                 };
 

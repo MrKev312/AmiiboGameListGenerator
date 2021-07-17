@@ -265,7 +265,7 @@ namespace AmiiboGameList
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(
-                        $"Error caught, press any key to continue:\n" +
+                        $"Error caught:\n" +
                         $"{url}\n\t" +
                         $"{ e }");
                 }
