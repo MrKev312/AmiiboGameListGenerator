@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace AmiiboGameList
@@ -29,7 +30,17 @@ namespace AmiiboGameList
     {
         /// <summary>Gets or sets the name of the game.</summary>
         /// <value>The name of the game.</value>
-        public string gameName { get; set; }
+        private string originalGameName;
+        [JsonIgnore]
+        public string sanatizedGameName;
+        public string gameName { get { return originalGameName; } set {
+                originalGameName = value;
+                if (value == "The Legend of Zelda: Skyward Sword HD")
+                    sanatizedGameName = "The Legend of Zelda™: Skyward Sword HD";
+                else
+                    sanatizedGameName = value;
+            } 
+        }
         /// <summary>Gets or sets the game identifier.</summary>
         /// <value>The game identifier.</value>
         public List<string> gameID { get; set; }

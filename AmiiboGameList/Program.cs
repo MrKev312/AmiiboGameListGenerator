@@ -8,6 +8,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using System.Xml.Serialization;
 
 namespace AmiiboGameList
@@ -183,17 +184,38 @@ namespace AmiiboGameList
                                 try
                                 {
                                     List<SwitchreleasesRelease> games = SwitchGames.FindAll(SwitchGame => rgx.Replace(WebUtility.HtmlDecode(SwitchGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
+                                    HtmlDocument htmlDoc = new();
+                                    
                                     if (games.Count == 0)
                                     {
-                                        game.gameID = game.gameName switch
+                                        game.gameID = game.sanatizedGameName switch
                                         {
                                             "Cyber Shadow" => new List<string> { "0100C1F0141AA000" },
                                             "Jikkyou Powerful Pro Baseball" => new List<string> { "0100E9C00BF28000" },
                                             "Super Kirby Clash" => new List<string> { "01003FB00C5A8000" },
                                             "Shovel Knight Showdown" => new List<string> { "0100B380022AE000" },
-                                            _ => throw new Exception(),
+                                            _ => null
                                         };
+
+                                        // In case everything fails to find it, use the cheats database
+                                        if(game.gameID == null)
+                                        {
+                                            // Look up the game
+                                            htmlDoc.LoadHtml(
+                                                WebUtility.HtmlDecode(
+                                                    new WebClient().DownloadString("https://www.cheatslips.com/games/?terms=" + HttpUtility.UrlEncode(game.sanatizedGameName))
+                                                    )
+                                                );
+                                            // Get first result
+                                            htmlDoc.LoadHtml(
+                                                WebUtility.HtmlDecode(
+                                                    new WebClient().DownloadString("https://www.cheatslips.com" + htmlDoc.DocumentNode.SelectSingleNode("//*[@class='card-columns']").ChildNodes[1].Attributes["href"].Value)
+                                                    )
+                                                );
+                                            game.gameID = new List<string> { htmlDoc.DocumentNode.SelectSingleNode("//*[@class='list-group-item']").ChildNodes[2].InnerText };
+                                        }
                                     }
+
                                     games.ForEach(SwitchGame =>
                                         game.gameID.Add(SwitchGame.titleid.Substring(0, 16)));
 
