@@ -1,65 +1,57 @@
 ﻿namespace AmiiboGameList
 {
-
-    // NOTE: Generated code may require at least .NET Framework 4.5 or .NET Core/Standard 2.0.
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    /// <summary>Class containing an array of 3DS games</summary>
+    [System.Serializable()]
+    [System.ComponentModel.DesignerCategory("code")]
     [System.Xml.Serialization.XmlRoot("releases")]
-    public partial class Switchreleases
+    public class Switchreleases
     {
 
         private SwitchreleasesRelease[] releaseField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute("release")]
+        /// <summary>Gets or sets the games.</summary>
+        /// <value>The release array.</value>
+        [System.Xml.Serialization.XmlElement("release")]
         public SwitchreleasesRelease[] release
         {
-            get
-            {
-                return this.releaseField;
-            }
-            set
-            {
-                this.releaseField = value;
-            }
+            get => releaseField; set => releaseField = value;
         }
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true)]
-    public partial class SwitchreleasesRelease
+    /// <summary>Class for each Switch game.</summary>
+    [System.Serializable()]
+    [System.ComponentModel.DesignerCategory("code")]
+    [System.Xml.Serialization.XmlType(AnonymousType = true)]
+    public class SwitchreleasesRelease
     {
+
+        private ushort idField;
+
         private string nameField;
 
         private string titleidField;
 
-        /// <remarks/>
-        public string name
+        /// <summary>Gets or sets the identifier of the game.</summary>
+        /// <value>The identifier.</value>
+        public ushort id
         {
-            get
-            {
-                return this.nameField;
-            }
-            set
-            {
-                this.nameField = value;
-            }
+            get => idField; set => idField = value;
         }
 
-        /// <remarks/>
+        /// <summary>Gets or sets the name.</summary>
+        /// <value>The name of the game.</value>
+        public string name
+        {
+            get => nameField; set => nameField = value;
+        }
+
+        /// <summary>Gets or sets the titleid.</summary>
+        /// <value>The titleid of the game.</value>
         public string titleid
         {
-            get
-            {
-                return this.titleidField;
-            }
-            set
-            {
-                this.titleidField = value;
-            }
+            get => titleidField; set => titleidField = value;
         }
     }
+
+
 }

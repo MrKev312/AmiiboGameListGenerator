@@ -1,10 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace AmiiboGameList
 {
 
+    /// <summary>Class to be JSONified and exported.</summary>
     public class AmiiboKeyValue
     {
         public Dictionary<Hex, Games> amiibos = new();
@@ -15,6 +14,7 @@ namespace AmiiboGameList
         public DBRootobject rootobject;
     }
 
+    /// <summary>Class to map all the database data to.</summary>
     public class DBRootobject
     {
         public Dictionary<string, string> amiibo_series = new();
@@ -24,12 +24,15 @@ namespace AmiiboGameList
         public Dictionary<string, string> types = new();
     }
 
+    /// <summary>Amiibo class for Amiibo's from the database.</summary>
     public class DBAmiibo
     {
         public string OriginalName;
         public Release release;
         public Hex ID;
 
+        /// <summary>Gets or sets the name.</summary>
+        /// <value>The name.</value>
         public string Name {
             get
             {
@@ -42,10 +45,6 @@ namespace AmiiboGameList
                     "Toon Zelda - The Wind Waker" => "Zelda The Wind Waker",
                     "Rosalina & Luma" => "Rosalina",
                     "Zelda & Loftwing" => "Zelda & Loftwing - Skyward Sword",
-                    "Samus (Metroid Dread)" => "Samus",
-                    "E.M.M.I." => "E M M I",
-                    "Tatsuhisa “Luke” Kamijō" => "Tatsuhisa Luke kamijo",
-                    "Gakuto Sōgetsu" => "Gakuto Sogetsu",
                     _ => OriginalName
                 };
 
@@ -54,7 +53,6 @@ namespace AmiiboGameList
 
                 ReturnName = ReturnName.Replace(".", "");
                 ReturnName = ReturnName.Replace("'", " ");
-                ReturnName = ReturnName.Replace("\"", "");
 
                 ReturnName = ReturnName.Replace(" & ", " ");
                 ReturnName = ReturnName.Replace(" - ", " ");
@@ -64,6 +62,8 @@ namespace AmiiboGameList
             set => OriginalName = value;
         }
 
+        /// <summary>Gets the name of the character.</summary>
+        /// <value>The name of the character.</value>
         public string characterName
         {
             get
@@ -84,6 +84,8 @@ namespace AmiiboGameList
             }
         }
 
+        /// <summary>Gets the amiibo series.</summary>
+        /// <value>The amiibo series.</value>
         public string amiiboSeries
         {
             get
@@ -99,11 +101,12 @@ namespace AmiiboGameList
                     "Skylanders" => "Skylanders Superchargers",
                     "8-bit Mario" => "Super Mario Bros 30th Anniversary",
                     "Monster Sunter Stories Rise" => "Monster Hunter Rise",
-                    "Yu-Gi-Oh!" => "Yu-Gi-Oh! Rush Duel Saikyo Battle Royale",
                     _ => AmiiboSeries,
                 };
             }
         }
+        /// <summary>Gets the type.</summary>
+        /// <value>The type.</value>
         public string type
         {
             get
@@ -113,45 +116,4 @@ namespace AmiiboGameList
             }
         }
     }
-
-    public class Games
-    {
-        public Games()
-        {
-            games3DS = new();
-            gamesWiiU = new();
-            gamesSwitch = new();
-        }
-
-        public List<Game> games3DS { get; set; }
-        public List<Game> gamesWiiU { get; set; }
-        public List<Game> gamesSwitch { get; set; }
-    }
-
-    public class Game : IComparable<Game>
-    {
-        public string gameName { get; set; }
-        public List<string> gameID { get; set; }
-        public List<AmiiboUsage> amiiboUsage { get; set; }
-
-        public int CompareTo(Game other)
-        {
-            return gameName.CompareTo(other.gameName);
-        }
-    }
-
-    public class AmiiboUsage
-    {
-        public string Usage;
-        public bool write;
-    }
-
-    public class Release
-    {
-        public string au { get; set; }
-        public string eu { get; set; }
-        public string jp { get; set; }
-        public string na { get; set; }
-    }
-
 }
