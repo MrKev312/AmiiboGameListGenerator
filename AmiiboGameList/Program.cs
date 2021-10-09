@@ -20,6 +20,15 @@ namespace AmiiboGameList
 
         static void Main()
         {
+#if DEBUG
+            Console.WriteLine("Download latest amiibo.json? y/n");
+            if (Console.ReadKey().Key == ConsoleKey.Y)
+                using (var AmiiboJSONClient = new WebClient())
+                {
+                    AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", "amiibo.json");
+                }
+            Console.WriteLine();
+#endif
             // Check if amiibo.json is provided
             if (!File.Exists("amiibo.json"))
             {
@@ -144,8 +153,8 @@ namespace AmiiboGameList
                         Game game = new()
                         {
                             gameName = node.SelectSingleNode(".//*[@class='name']/text()[normalize-space()]").InnerText.Trim().Replace("Poochy & ", "").Trim().Replace("Ace Combat Assault Horizon Legacy +", "Ace Combat Assault Horizon Legacy+").Replace("Power Pros", "Jikkyou Powerful Pro Baseball"),
-                            gameID = new List<string>(),
-                            amiiboUsage = new List<AmiiboUsage>()
+                            gameID = new(),
+                            amiiboUsage = new()
                         };
 
                         // Get the amiibo usages
@@ -154,7 +163,7 @@ namespace AmiiboGameList
                             game.amiiboUsage.Add(new AmiiboUsage
                             {
                                 Usage = amiiboUsage.GetDirectInnerText().Trim(),
-                                write = amiiboUsage.SelectSingleNode("em").InnerText == "(Read+Write)"
+                                write = amiiboUsage.SelectSingleNode("em")?.InnerText == "(Read+Write)"
                             });
                         }
 
@@ -169,14 +178,16 @@ namespace AmiiboGameList
                                 try
                                 {
                                     List<SwitchreleasesRelease> games = SwitchGames.FindAll(SwitchGame => rgx.Replace(WebUtility.HtmlDecode(SwitchGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
-                                    if (games.Count == 0)
+                                    if (games?.Count == 0)
                                     {
                                         game.gameID = game.gameName switch
                                         {
-                                            "Cyber Shadow" => new List<string> { "0100C1F0141AA000" },
-                                            "Jikkyou Powerful Pro Baseball" => new List<string> { "0100E9C00BF28000" },
-                                            "Super Kirby Clash" => new List<string> { "01003FB00C5A8000" },
-                                            "Shovel Knight Showdown" => new List<string> { "0100B380022AE000" },
+                                            "Cyber Shadow" => new() { "0100C1F0141AA000" },
+                                            "Jikkyou Powerful Pro Baseball" => new() { "0100E9C00BF28000" },
+                                            "Super Kirby Clash" => new() { "01003FB00C5A8000" },
+                                            "Shovel Knight Showdown" => new() { "0100B380022AE000" },
+                                            "The Legend of Zelda: Skyward Sword HD" => new() { "01002DA013484000" },
+                                            "Yu-Gi-Oh! Rush Duel Saikyo Battle Royale" => new() { "01003C101454A000" },
                                             _ => throw new Exception(),
                                         };
                                     }
@@ -194,15 +205,20 @@ namespace AmiiboGameList
                             case "wii u":
                                 try
                                 {
-                                    string[] gameIDs = WiiUGames.Find(WiiUGame => WiiUGame.Name.Contains(game.gameName, StringComparer.OrdinalIgnoreCase)).Ids;
-                                    if (gameIDs.Length == 0)
+                                    string[] gameIDs = WiiUGames.Find(WiiUGame => WiiUGame.Name.Contains(game.gameName, StringComparer.OrdinalIgnoreCase))?.Ids;
+                                    if (gameIDs?.Length == 0 || gameIDs == null)
                                     {
-                                        throw new Exception();
+                                        game.gameID = game.gameName switch
+                                        {
+                                            "Shovel Knight Showdown" => new() { "000500001016E100", "0005000010178F00", "0005000E1016E100", "0005000E10178F00", "0005000E101D9300" },
+                                            _ => throw new Exception(),
+                                        };
                                     }
-                                    foreach (string ID in gameIDs)
-                                    {
-                                        game.gameID.Add(ID.Substring(0, 16));
-                                    }
+                                    else
+                                        foreach (string ID in gameIDs)
+                                        {
+                                            game.gameID.Add(ID.Substring(0, 16));
+                                        }
                                     game.gameID = game.gameID.Distinct().ToList();
                                     ExAmiibo.gamesWiiU.Add(game);
                                 }
@@ -215,19 +231,19 @@ namespace AmiiboGameList
                                 try
                                 {
                                     List<DSreleasesRelease> games = DSGames.FindAll(DSGame => rgx.Replace(WebUtility.HtmlDecode(DSGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
-                                    if (games.Count == 0)
+                                    if (games?.Count == 0)
                                     {
                                         game.gameID = game.gameName switch
                                         {
-                                            "Style Savvy: Styling Star" => new List<string> { "00040000001C2500" },
-                                            "Metroid Prime: Blast Ball" => new List<string> { "0004000000175300" },
-                                            "Mini Mario & Friends amiibo Challenge" => new List<string> { "000400000016C300", "000400000016C200" },
-                                            "Team Kirby Clash Deluxe" => new List<string> { "00040000001AB900", "00040000001AB800" },
-                                            "Kirby's Extra Epic Yarn" => new List<string> { "00040000001D1F00" },
-                                            "Kirby's Blowout Blast" => new List<string> { "0004000000196F00" },
-                                            "BYE-BYE BOXBOY!" => new List<string> { "00040000001B5400", "00040000001B5300" },
-                                            "Azure Striker Gunvolt 2" => new List<string> { "00040000001A6E00" },
-                                            "niconico app" => new List<string> { "0005000010116400" },
+                                            "Style Savvy: Styling Star" => new() { "00040000001C2500" },
+                                            "Metroid Prime: Blast Ball" => new() { "0004000000175300" },
+                                            "Mini Mario & Friends amiibo Challenge" => new() { "000400000016C300", "000400000016C200" },
+                                            "Team Kirby Clash Deluxe" => new() { "00040000001AB900", "00040000001AB800" },
+                                            "Kirby's Extra Epic Yarn" => new() { "00040000001D1F00" },
+                                            "Kirby's Blowout Blast" => new() { "0004000000196F00" },
+                                            "BYE-BYE BOXBOY!" => new() { "00040000001B5400", "00040000001B5300" },
+                                            "Azure Striker Gunvolt 2" => new() { "00040000001A6E00" },
+                                            "niconico app" => new() { "0005000010116400" },
                                             _ => throw new Exception(),
                                         };
                                     }
@@ -254,6 +270,8 @@ namespace AmiiboGameList
                         $"Error caught, press any key to continue:\n" +
                         $"{url}\n\t" +
                         $"{ e }");
+                    Console.ReadKey();
+                    Console.WriteLine();
                 }
 
                 // Sort all gamelists
@@ -285,7 +303,7 @@ namespace AmiiboGameList
                 Formatting = Formatting.Indented,
                 IndentChar = '\t',
                 Indentation = 1,
-                
+
             };
 
             // Write the file
@@ -295,7 +313,7 @@ namespace AmiiboGameList
             Console.WriteLine("\nDone generating the JSON!");
 
             // Show missing games
-            if(missingGames.Count != 0)
+            if (missingGames.Count != 0)
             {
                 Console.WriteLine("However, the following games could not be added to the database:");
                 foreach (var Game in missingGames.Distinct())

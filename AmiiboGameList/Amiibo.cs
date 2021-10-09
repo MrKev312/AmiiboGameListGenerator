@@ -41,6 +41,11 @@ namespace AmiiboGameList
                     "Midna & Wolf Link" => "Wolf Link",
                     "Toon Zelda - The Wind Waker" => "Zelda The Wind Waker",
                     "Rosalina & Luma" => "Rosalina",
+                    "Zelda & Loftwing" => "Zelda & Loftwing - Skyward Sword",
+                    "Samus (Metroid Dread)" => "Samus",
+                    "E.M.M.I." => "E M M I",
+                    "Tatsuhisa “Luke” Kamijō" => "Tatsuhisa Luke kamijo",
+                    "Gakuto Sōgetsu" => "Gakuto Sogetsu",
                     _ => OriginalName
                 };
 
@@ -49,6 +54,7 @@ namespace AmiiboGameList
 
                 ReturnName = ReturnName.Replace(".", "");
                 ReturnName = ReturnName.Replace("'", " ");
+                ReturnName = ReturnName.Replace("\"", "");
 
                 ReturnName = ReturnName.Replace(" & ", " ");
                 ReturnName = ReturnName.Replace(" - ", " ");
@@ -93,6 +99,7 @@ namespace AmiiboGameList
                     "Skylanders" => "Skylanders Superchargers",
                     "8-bit Mario" => "Super Mario Bros 30th Anniversary",
                     "Monster Sunter Stories Rise" => "Monster Hunter Rise",
+                    "Yu-Gi-Oh!" => "Yu-Gi-Oh! Rush Duel Saikyo Battle Royale",
                     _ => AmiiboSeries,
                 };
             }
