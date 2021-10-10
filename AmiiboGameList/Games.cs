@@ -68,13 +68,4 @@ namespace AmiiboGameList
         /// <summary>Bool to signify if this AmiiboUsage will write to the Amiibo.</summary>
         public bool write;
     }
-
-    /// <summary>Class containing all release dates per region.</summary>
-    public class Release
-    {
-        public string au { get; set; }
-        public string eu { get; set; }
-        public string jp { get; set; }
-        public string na { get; set; }
-    }
 }
