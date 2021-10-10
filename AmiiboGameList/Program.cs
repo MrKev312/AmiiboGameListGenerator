@@ -47,9 +47,15 @@ namespace AmiiboGameList
             // Check if amiibo.json is provided
             if (!File.Exists("amiibo.json"))
             {
-                Console.WriteLine("Download and place the amiibo.json in the same folder as this exe");
-                Console.ReadKey();
-                return;
+                Console.WriteLine("Amiibo.json not found, download latest amiibo.json? y/n");
+                if (Console.ReadKey().Key == ConsoleKey.Y)
+                    using (WebClient AmiiboJSONClient = new())
+                    {
+                        AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", "amiibo.json");
+                    }
+                else
+                    return;
+                Console.WriteLine();
             }
 
             // Load Amiibo data
