@@ -1,6 +1,6 @@
 ﻿namespace AmiiboGameList
 {
-    /// <summary>Class containing an array of 3DS games</summary>
+    /// <summary>Class containing an array of Switch games</summary>
     [System.Serializable()]
     [System.ComponentModel.DesignerCategory("code")]
     [System.Xml.Serialization.XmlRoot("releases")]
