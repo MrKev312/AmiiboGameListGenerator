@@ -58,6 +58,9 @@ namespace AmiiboGameList
                 Console.WriteLine();
             }
 
+            // Load Regex for removing copyrights, trademarks, etc.
+            Regex rx = new(@"[®™]", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
             // Load Amiibo data
             BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(".\\amiibo.json").Trim());
             Dictionary<Hex, Games> export = new();
@@ -66,6 +69,8 @@ namespace AmiiboGameList
             {
                 entry.Value.ID = entry.Key;
             }
+            // Make WebClient
+            WebClient client = new();
 
             // Load Wii U games
             List<GameInfo> WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
@@ -75,16 +80,15 @@ namespace AmiiboGameList
             byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
             MemoryStream stream = new(byteArray);
             List<DSreleasesRelease> DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
-            stream.Close();
+            stream.Dispose();
 
             // Load Switch games
-            WebClient client = new();
-            client.Encoding = Encoding.UTF8;
-            serializer = new(typeof(Switchreleases));
-            byteArray = Encoding.UTF8.GetBytes(client.DownloadString(@"http://nswdb.com/xml.php"));
-            stream = new(byteArray);
-            List<SwitchreleasesRelease> SwitchGames = ((Switchreleases)serializer.Deserialize(stream)).release.ToList();
-            stream.Dispose();
+            Lookup<string, string> SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json"))
+                // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
+                .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
+                // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
+                .ToLookup(x => rx.Replace(x.Key, "").Replace('’', '\'').ToLower(), x => x.Value);
+
 
             // List to keep track of missing games
             List<string> missingGames = new();
@@ -198,10 +202,10 @@ namespace AmiiboGameList
                             case "switch":
                                 try
                                 {
-                                    List<SwitchreleasesRelease> games = SwitchGames.FindAll(SwitchGame => rgx.Replace(WebUtility.HtmlDecode(SwitchGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
+                                    game.gameID = SwitchGames[game.sanatizedGameName.ToLower()].ToList();
                                     HtmlDocument htmlDoc = new();
 
-                                    if (games.Count == 0)
+                                    if (game.gameID.Count == 0)
                                     {
                                         game.gameID = game.sanatizedGameName switch
                                         {
@@ -211,30 +215,9 @@ namespace AmiiboGameList
                                             "Shovel Knight Showdown" => new() { "0100B380022AE000" },
                                             "The Legend of Zelda: Skyward Sword HD" => new() { "01002DA013484000" },
                                             "Yu-Gi-Oh! Rush Duel Saikyo Battle Royale" => new() { "01003C101454A000" },
-                                            _ => null
+                                            _ => throw new Exception()
                                         };
-
-                                        // In case everything fails to find it, use the cheatslips database
-                                        if (game.gameID == null)
-                                        {
-                                            // Look up the game
-                                            htmlDoc.LoadHtml(
-                                                WebUtility.HtmlDecode(
-                                                    new WebClient().DownloadString("https://www.cheatslips.com/games/?terms=" + HttpUtility.UrlEncode(game.sanatizedGameName))
-                                                    )
-                                                );
-                                            // Get first result
-                                            htmlDoc.LoadHtml(
-                                                WebUtility.HtmlDecode(
-                                                    new WebClient().DownloadString("https://www.cheatslips.com" + htmlDoc.DocumentNode.SelectSingleNode("//*[@class='card-columns']").ChildNodes[1].Attributes["href"].Value)
-                                                    )
-                                                );
-                                            game.gameID = new() { htmlDoc.DocumentNode.SelectSingleNode("//*[@class='list-group-item']").ChildNodes[2].InnerText };
-                                        }
                                     }
-
-                                    games.ForEach(SwitchGame =>
-                                        game.gameID.Add(SwitchGame.titleid.Substring(0, 16)));
 
                                     game.gameID = game.gameID.Distinct().ToList();
                                     ExAmiibo.gamesSwitch.Add(game);
@@ -332,7 +315,7 @@ namespace AmiiboGameList
             Hex[] KeyArray = export.Keys.ToArray();
             Array.Sort(KeyArray);
             AmiiboKeyValue SortedAmiibos = new();
-            foreach (var key in KeyArray)
+            foreach (Hex key in KeyArray)
             {
                 SortedAmiibos.amiibos.Add(key, export[key]);
             }

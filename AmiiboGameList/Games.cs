@@ -35,10 +35,14 @@ namespace AmiiboGameList
         public string sanatizedGameName;
         public string gameName { get { return originalGameName; } set {
                 originalGameName = value;
-                if (value == "The Legend of Zelda: Skyward Sword HD")
-                    sanatizedGameName = "The Legend of Zelda™: Skyward Sword HD";
-                else
-                    sanatizedGameName = value;
+                sanatizedGameName = value switch
+                {
+                    "The Legend of Zelda: Skyward Sword HD" => "The Legend of Zelda: Skyward Sword HD",
+                    "Mario + Rabbids: Kingdom Battle" => "Mario + Rabbids Kingdom Battle",
+                    "Shovel Knight" => "Shovel Knight: Treasure Trove",
+                    "Little Nightmares: Complete Edition" => "Little Nightmares Complete Edition",
+                    _ => value
+                };
             } 
         }
         /// <summary>Gets or sets the game identifier.</summary>

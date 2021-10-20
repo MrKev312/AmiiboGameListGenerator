@@ -1,47 +1,11 @@
-﻿namespace AmiiboGameList
+﻿using System.Collections.Generic;
+
+namespace AmiiboGameList
 {
-    /// <summary>Class containing an array of Switch games</summary>
-    [System.Serializable()]
-    [System.ComponentModel.DesignerCategory("code")]
-    [System.Xml.Serialization.XmlRoot("releases")]
-    public class Switchreleases
+    public class SwitchGame
     {
+        public string id { get; set; }
+        public string name { get; set; }
 
-        private SwitchreleasesRelease[] releaseField;
-
-        /// <summary>Gets or sets the games.</summary>
-        /// <value>The release array.</value>
-        [System.Xml.Serialization.XmlElement("release")]
-        public SwitchreleasesRelease[] release
-        {
-            get => releaseField; set => releaseField = value;
-        }
     }
-
-    /// <summary>Class for each Switch game.</summary>
-    [System.Serializable()]
-    [System.ComponentModel.DesignerCategory("code")]
-    [System.Xml.Serialization.XmlType(AnonymousType = true)]
-    public class SwitchreleasesRelease
-    {
-        private string nameField;
-
-        private string titleidField;
-
-        /// <summary>Gets or sets the name.</summary>
-        /// <value>The name of the game.</value>
-        public string name
-        {
-            get => nameField; set => nameField = value;
-        }
-
-        /// <summary>Gets or sets the titleid.</summary>
-        /// <value>The titleid of the game.</value>
-        public string titleid
-        {
-            get => titleidField; set => titleidField = value;
-        }
-    }
-
-
 }
