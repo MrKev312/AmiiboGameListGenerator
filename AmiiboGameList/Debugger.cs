@@ -13,6 +13,8 @@ namespace AmiiboGameList
             Error
         }
 
+        public static void Log(string Message) => Log(Message, DebugLevel.Info);
+
         public static void Log(string Message, DebugLevel Severity)
         {
             if (Severity >= CurrentDebugLevel)

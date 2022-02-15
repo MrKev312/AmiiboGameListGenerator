@@ -35,16 +35,37 @@ namespace AmiiboGameList
         /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
         static void Main(string[] args)
         {
+            // Make arguments lowercase
+            for (int i = 0; i < args.Length; i++)
+            {
+                args[i] = args[i].ToLowerInvariant();
+            }
             if (args.Length != 0)
             {
-                Debugger.Log("Running with these arguments: " + string.Join(' ', args), Debugger.DebugLevel.Info);
+                Debugger.Log($"Running with these arguments: {string.Join(' ', args)}\n");
+
+                // Show help message
+                if (args.Contains("-h") || args.Contains("-help"))
+                {
+                    StringBuilder sB = new();
+                    sB.AppendLine("Usage:");
+                    sB.AppendLine("-i | -input {filepath} to specify input json");
+                    sB.AppendLine("-o | -output {filepath} to specify output json");
+                    sB.AppendLine("-u | -update to automatically get the latest amiibo.json from github, if the -i parameter is specified this will be saved to that path");
+                    sB.AppendLine("-l | -log {value} will set the logging level, can pick from verbose, info, warn, error or from 0 to 3 respectively");
+                    sB.AppendLine("-h | -help shows this message");
+                    Debugger.Log(sB.ToString());
+                    return;
+                }
             }
 
+            // Set default values
             string inputPath = @".\amiibo.json";
             string outputPath = @".\games_info.json";
             bool update = false;
             Debugger.CurrentDebugLevel = Debugger.DebugLevel.Info;
 
+            // Loop through arguments
             for (int i = 0; i < args.Length; i++)
             {
                 switch (args[i])
@@ -95,9 +116,10 @@ namespace AmiiboGameList
                 }
             }
 
+            // If update is set, download latest amiibo.json
             if (update)
             {
-                Debugger.Log("Downloading latest amiibo.json from github", Debugger.DebugLevel.Info);
+                Debugger.Log("Downloading latest amiibo.json from github");
                 using WebClient AmiiboJSONClient = new();
                 AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", inputPath);
             }
@@ -106,7 +128,7 @@ namespace AmiiboGameList
             Regex rx = new(@"[®™]", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
             // Load Amiibo data
-            Debugger.Log("Loading Amiibo's", Debugger.DebugLevel.Info);
+            Debugger.Log("Loading Amiibo's");
             BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(inputPath).Trim());
             Dictionary<Hex, Games> export = new();
 
@@ -118,11 +140,11 @@ namespace AmiiboGameList
             WebClient client = new();
 
             // Load Wii U games
-            Debugger.Log("Loading WiiU games", Debugger.DebugLevel.Info);
+            Debugger.Log("Loading WiiU games");
             List<GameInfo> WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
 
             // Load 3DS games
-            Debugger.Log("Loading 3DS games", Debugger.DebugLevel.Info);
+            Debugger.Log("Loading 3DS games");
             XmlSerializer serializer = new(typeof(DSreleases));
             byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
             MemoryStream stream = new(byteArray);
@@ -130,13 +152,13 @@ namespace AmiiboGameList
             stream.Dispose();
 
             // Load Switch games
-            Debugger.Log("Loading Switch games", Debugger.DebugLevel.Info);
+            Debugger.Log("Loading Switch games");
             Lookup<string, string> SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json"))
                 // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
                 .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
                 // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
                 .ToLookup(x => rx.Replace(x.Key, "").Replace('’', '\'').ToLower(), x => x.Value);
-            Debugger.Log("Done loading!", Debugger.DebugLevel.Info);
+            Debugger.Log("Done loading!");
 
             // List to keep track of missing games
             List<string> missingGames = new();
@@ -376,7 +398,7 @@ namespace AmiiboGameList
             File.WriteAllText(outputPath, JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented).Replace("  ", "\t"));
 
             // Inform we're done
-            Debugger.Log("\nDone generating the JSON!", Debugger.DebugLevel.Info);
+            Debugger.Log("\nDone generating the JSON!");
 
             // Show missing games
             if (missingGames.Count != 0)
