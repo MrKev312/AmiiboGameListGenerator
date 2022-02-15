@@ -32,7 +32,8 @@ namespace AmiiboGameList
 
         /// <summary>Gets or sets the name.</summary>
         /// <value>The name.</value>
-        public string Name {
+        public string Name
+        {
             get
             {
                 string ReturnName = OriginalName switch

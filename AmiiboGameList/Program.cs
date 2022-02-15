@@ -26,7 +26,7 @@ namespace AmiiboGameList
         /// <value>
         /// The instance of the AmiiboDataBase.
         /// </value>
-        public static DBRootobjectInstance BRootobject { get { return lazy.Value; } }
+        public static DBRootobjectInstance BRootobject => lazy.Value;
 
         /// <summary>
         /// Mains this instance.
@@ -90,7 +90,7 @@ namespace AmiiboGameList
             BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(inputPath).Trim());
             Dictionary<Hex, Games> export = new();
 
-            foreach (var entry in BRootobject.rootobject.amiibos)
+            foreach (KeyValuePair<Hex, DBAmiibo> entry in BRootobject.rootobject.amiibos)
             {
                 entry.Value.ID = entry.Key;
             }
@@ -141,7 +141,9 @@ namespace AmiiboGameList
                 // Handle cat in getter for name
                 // TODO: move to Amiibo.cs
                 if (url.EndsWith("cat"))
-                    url = url.Insert(url.LastIndexOf('/') + 1, "cat-").Substring(0, url.Length);
+                {
+                    url = url.Insert(url.LastIndexOf('/') + 1, "cat-")[..url.Length];
+                }
 
                 // If the amiibo is an animal crossing card, look name up on site and get the first link
                 // TODO: error if no link is found
@@ -156,7 +158,7 @@ namespace AmiiboGameList
                         );
 
                     // Filter for card amiibos only and get url
-                    foreach (var item in htmlDoc.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
+                    foreach (HtmlNode item in htmlDoc.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
                     {
                         if (item.ChildNodes[1].GetAttributeValue("href", string.Empty).Contains("cards"))
                         {
@@ -211,7 +213,7 @@ namespace AmiiboGameList
                         };
 
                         // Get the amiibo usages
-                        foreach (var amiiboUsage in node.SelectNodes(".//*[@class='features']/li"))
+                        foreach (HtmlNode amiiboUsage in node.SelectNodes(".//*[@class='features']/li"))
                         {
                             game.amiiboUsage.Add(new()
                             {
@@ -221,7 +223,9 @@ namespace AmiiboGameList
                         }
 
                         if (DBamiibo.Value.Name == "Shadow Mewtwo")
+                        {
                             game.gameName = "Pokkén Tournament";
+                        }
 
                         // Add game to the correct console and get correct titleid
                         Regex rgx = new("[^a-zA-Z0-9 -]");
@@ -268,10 +272,13 @@ namespace AmiiboGameList
                                         };
                                     }
                                     else
+                                    {
                                         foreach (string ID in gameIDs)
                                         {
-                                            game.gameID.Add(ID.Substring(0, 16));
+                                            game.gameID.Add(ID[..16]);
                                         }
+                                    }
+
                                     game.gameID = game.gameID.Distinct().ToList();
                                     ExAmiibo.gamesWiiU.Add(game);
                                 }
@@ -301,7 +308,7 @@ namespace AmiiboGameList
                                         };
                                     }
                                     games.ForEach(DSGame =>
-                                        game.gameID.Add(DSGame.titleid.Substring(0, 16)));
+                                        game.gameID.Add(DSGame.titleid[..16]));
 
                                     game.gameID = game.gameID.Distinct().ToList();
                                     ExAmiibo.games3DS.Add(game);
@@ -358,7 +365,7 @@ namespace AmiiboGameList
             if (missingGames.Count != 0)
             {
                 Console.WriteLine("However, the following games couldn't find their titleids and thus couldn't be added:");
-                foreach (var Game in missingGames.Distinct())
+                foreach (string Game in missingGames.Distinct())
                 {
                     Console.WriteLine("\t" + Game);
                 }

@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace AmiiboGameList
+﻿namespace AmiiboGameList
 {
     public class SwitchGame
     {

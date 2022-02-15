@@ -17,7 +17,7 @@ namespace AmiiboGameList
         }
 
         // Converters
-        static public explicit operator Hex(string value)
+        public static explicit operator Hex(string value)
         {
             return new Hex(Convert.ToUInt64(value, 16));
         }

@@ -33,7 +33,10 @@ namespace AmiiboGameList
         private string originalGameName;
         [JsonIgnore]
         public string sanatizedGameName;
-        public string gameName { get { return originalGameName; } set {
+        public string gameName
+        {
+            get => originalGameName; set
+            {
                 originalGameName = value;
                 sanatizedGameName = value switch
                 {
@@ -43,7 +46,7 @@ namespace AmiiboGameList
                     "Little Nightmares: Complete Edition" => "Little Nightmares Complete Edition",
                     _ => value
                 };
-            } 
+            }
         }
         /// <summary>Gets or sets the game identifier.</summary>
         /// <value>The game identifier.</value>
