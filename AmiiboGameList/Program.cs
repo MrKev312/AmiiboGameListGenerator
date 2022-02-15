@@ -35,9 +35,13 @@ namespace AmiiboGameList
         /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
         static void Main(string[] args)
         {
+            if(args.Length != 0)
+                Debugger.Log("Running with these arguments: " + string.Join(' ', args), Debugger.DebugLevel.Info);
             string inputPath = @".\amiibo.json";
             string outputPath = @".\games_info.json";
             bool update = false;
+            Debugger.CurrentDebugLevel = Debugger.DebugLevel.Info;
+
             for (int i = 0; i < args.Length; i++)
             {
                 switch (args[i])
@@ -70,6 +74,19 @@ namespace AmiiboGameList
                     case "-update":
                         update = true;
                         break;
+                    case "-l":
+                    case "-log":
+                        ;
+                        if(Enum.TryParse(args[i + 1], true, out Debugger.DebugLevel debugLevel))
+                        {
+                            Debugger.CurrentDebugLevel = debugLevel;
+                            i++;
+                            continue;
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Incorrect debug level passed: {args[i + 1]}");
+                        }
                     default:
                         break;
                 }
@@ -77,7 +94,7 @@ namespace AmiiboGameList
 
             if (update)
             {
-                Console.WriteLine("Downloading latest amiibo.json from github");
+                Debugger.Log("Downloading latest amiibo.json from github", Debugger.DebugLevel.Info);
                 using WebClient AmiiboJSONClient = new();
                 AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", inputPath);
             }
@@ -86,7 +103,7 @@ namespace AmiiboGameList
             Regex rx = new(@"[®™]", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
             // Load Amiibo data
-            Console.WriteLine("Loading Amiibo's");
+            Debugger.Log("Loading Amiibo's", Debugger.DebugLevel.Info);
             BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(inputPath).Trim());
             Dictionary<Hex, Games> export = new();
 
@@ -98,11 +115,11 @@ namespace AmiiboGameList
             WebClient client = new();
 
             // Load Wii U games
-            Console.WriteLine("Loading WiiU games");
+            Debugger.Log("Loading WiiU games", Debugger.DebugLevel.Info);
             List<GameInfo> WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
 
             // Load 3DS games
-            Console.WriteLine("Loading 3DS games");
+            Debugger.Log("Loading 3DS games", Debugger.DebugLevel.Info);
             XmlSerializer serializer = new(typeof(DSreleases));
             byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
             MemoryStream stream = new(byteArray);
@@ -110,13 +127,13 @@ namespace AmiiboGameList
             stream.Dispose();
 
             // Load Switch games
-            Console.WriteLine("Loading Switch games");
+            Debugger.Log("Loading Switch games", Debugger.DebugLevel.Info);
             Lookup<string, string> SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json"))
                 // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
                 .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
                 // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
                 .ToLookup(x => rx.Replace(x.Key, "").Replace('’', '\'').ToLower(), x => x.Value);
-            Console.WriteLine("Done loading!");
+            Debugger.Log("Done loading!", Debugger.DebugLevel.Info);
 
             // List to keep track of missing games
             List<string> missingGames = new();
@@ -196,8 +213,7 @@ namespace AmiiboGameList
                     HtmlNodeCollection GamesPanel = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a");
                     if (GamesPanel.Count == 0)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("No games found for " + DBamiibo.Value.Name);
+                        Debugger.Log("No games found for " + DBamiibo.Value.Name, Debugger.DebugLevel.Verbose);
                         return;
                     }
 
@@ -325,11 +341,10 @@ namespace AmiiboGameList
                 }
                 catch (Exception e)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(
+                    Debugger.Log(
                         $"Error caught:\n" +
                         $"{url}\n\t" +
-                        $"{ e }");
+                        $"{ e }", Debugger.DebugLevel.Error);
                 }
 
                 // Sort all gamelists
@@ -341,9 +356,8 @@ namespace AmiiboGameList
                 export.Add(DBamiibo.Key, ExAmiibo);
 
                 // Show which amiibo just got added
-                Console.ForegroundColor = ConsoleColor.White;
                 AmiiboCounter++;
-                Console.WriteLine($"{ AmiiboCounter:D3}/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })");
+                Debugger.Log($"{ AmiiboCounter:D3}/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })", Debugger.DebugLevel.Verbose);
             });
 
             // Sort everything
@@ -359,15 +373,15 @@ namespace AmiiboGameList
             File.WriteAllText(outputPath, JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented).Replace("  ", "\t"));
 
             // Inform we're done
-            Console.WriteLine("\nDone generating the JSON!");
+            Debugger.Log("\nDone generating the JSON!", Debugger.DebugLevel.Info);
 
             // Show missing games
             if (missingGames.Count != 0)
             {
-                Console.WriteLine("However, the following games couldn't find their titleids and thus couldn't be added:");
+                Debugger.Log("However, the following games couldn't find their titleids and thus couldn't be added:", Debugger.DebugLevel.Warn);
                 foreach (string Game in missingGames.Distinct())
                 {
-                    Console.WriteLine("\t" + Game);
+                    Debugger.Log("\t" + Game, Debugger.DebugLevel.Warn);
                 }
             }
 
