@@ -33,36 +33,61 @@ namespace AmiiboGameList
         /// </summary>
         /// <returns></returns>
         /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
-        static void Main()
+        static void Main(string[] args)
         {
-#if DEBUG
-            Console.WriteLine("Download latest amiibo.json? y/n");
-            if (Console.ReadKey().Key == ConsoleKey.Y)
-                using (WebClient AmiiboJSONClient = new())
-                {
-                    AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", "amiibo.json");
-                }
-            Console.WriteLine();
-#endif
-            // Check if amiibo.json is provided
-            if (!File.Exists("amiibo.json"))
+            string inputPath = @".\amiibo.json";
+            string outputPath = @".\games_info.json";
+            bool update = false;
+            for (int i = 0; i < args.Length; i++)
             {
-                Console.WriteLine("Amiibo.json not found, download latest amiibo.json? y/n");
-                if (Console.ReadKey().Key == ConsoleKey.Y)
-                    using (WebClient AmiiboJSONClient = new())
-                    {
-                        AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", "amiibo.json");
-                    }
-                else
-                    return;
-                Console.WriteLine();
+                switch (args[i])
+                {
+                    case "-i":
+                    case "-input":
+                        if (File.Exists(args[i + 1]) || args.Contains("-i") || args.Contains("-update"))
+                        {
+                            inputPath = args[i + 1];
+                            i++;
+                            continue;
+                        }
+                        else
+                        {
+                            throw new FileNotFoundException($"Input file '{args[i + 1]}' not found");
+                        }
+                    case "-o":
+                    case "-output":
+                        if (Directory.Exists(Path.GetDirectoryName(args[i + 1])))
+                        {
+                            outputPath = args[i + 1];
+                            i++;
+                            continue;
+                        }
+                        else
+                        {
+                            throw new DirectoryNotFoundException($"Input directory '{args[i + 1]}' not found");
+                        }
+                    case "-u":
+                    case "-update":
+                        update = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (update)
+            {
+                Console.WriteLine("Downloading latest amiibo.json from github");
+                using WebClient AmiiboJSONClient = new();
+                AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", inputPath);
             }
 
             // Load Regex for removing copyrights, trademarks, etc.
             Regex rx = new(@"[®™]", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
             // Load Amiibo data
-            BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(".\\amiibo.json").Trim());
+            Console.WriteLine("Loading Amiibo's");
+            BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(inputPath).Trim());
             Dictionary<Hex, Games> export = new();
 
             foreach (var entry in BRootobject.rootobject.amiibos)
@@ -73,9 +98,11 @@ namespace AmiiboGameList
             WebClient client = new();
 
             // Load Wii U games
+            Console.WriteLine("Loading WiiU games");
             List<GameInfo> WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
 
             // Load 3DS games
+            Console.WriteLine("Loading 3DS games");
             XmlSerializer serializer = new(typeof(DSreleases));
             byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
             MemoryStream stream = new(byteArray);
@@ -83,12 +110,13 @@ namespace AmiiboGameList
             stream.Dispose();
 
             // Load Switch games
+            Console.WriteLine("Loading Switch games");
             Lookup<string, string> SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json"))
                 // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
                 .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
                 // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
                 .ToLookup(x => rx.Replace(x.Key, "").Replace('’', '\'').ToLower(), x => x.Value);
-
+            Console.WriteLine("Done loading!");
 
             // List to keep track of missing games
             List<string> missingGames = new();
@@ -321,7 +349,7 @@ namespace AmiiboGameList
             }
 
             //// Write the SortedAmiibos to file as an tab-indented json
-            File.WriteAllText("./games_info.json", JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented).Replace("  ", "\t"));
+            File.WriteAllText(outputPath, JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented).Replace("  ", "\t"));
 
             // Inform we're done
             Console.WriteLine("\nDone generating the JSON!");
