@@ -1,12 +1,22 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AmiiboGameList
 {
     /// <summary>Class to hold all the game data for all consoles.</summary>
     public class Games
     {
+        [JsonIgnore]
+        internal static List<GameInfo> WiiUGames;
+        [JsonIgnore]
+        internal static List<DSreleasesRelease> DSGames;
+        [JsonIgnore]
+        internal static Lookup<string, string> SwitchGames;
+        [JsonIgnore]
+        internal static List<string> missingGames;
+
         /// <summary>Initializes a new instance of the <see cref="Games" /> class.</summary>
         public Games()
         {
