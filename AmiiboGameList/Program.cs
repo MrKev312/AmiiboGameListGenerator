@@ -35,8 +35,11 @@ namespace AmiiboGameList
         /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
         static void Main(string[] args)
         {
-            if(args.Length != 0)
+            if (args.Length != 0)
+            {
                 Debugger.Log("Running with these arguments: " + string.Join(' ', args), Debugger.DebugLevel.Info);
+            }
+
             string inputPath = @".\amiibo.json";
             string outputPath = @".\games_info.json";
             bool update = false;
@@ -77,7 +80,7 @@ namespace AmiiboGameList
                     case "-l":
                     case "-log":
                         ;
-                        if(Enum.TryParse(args[i + 1], true, out Debugger.DebugLevel debugLevel))
+                        if (Enum.TryParse(args[i + 1], true, out Debugger.DebugLevel debugLevel))
                         {
                             Debugger.CurrentDebugLevel = debugLevel;
                             i++;
