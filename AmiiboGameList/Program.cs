@@ -29,6 +29,7 @@ namespace AmiiboGameList
         public static DBRootobjectInstance BRootobject => lazy.Value;
 
         private static readonly WebClient client = new();
+        private static string inputPath, outputPath;
 
         /// <summary>
         /// Mains this instance.
@@ -37,7 +38,7 @@ namespace AmiiboGameList
         /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
         static void Main(string[] args)
         {
-            ParseArguments(args, out string inputPath, out string outputPath);
+            ParseArguments(args);
 
             // Load Regex for removing copyrights, trademarks, etc.
             Regex rx = new(@"[®™]", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
@@ -331,7 +332,7 @@ namespace AmiiboGameList
             return (DBamiibo.Key, ExAmiibo);
         }
 
-        private static void ParseArguments(string[] args, out string inputPath, out string outputPath)
+        private static void ParseArguments(string[] args)
         {
             // Make arguments lowercase
             for (int i = 0; i < args.Length; i++)
