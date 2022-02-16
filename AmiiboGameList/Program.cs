@@ -390,11 +390,11 @@ namespace AmiiboGameList
                 {
                     StringBuilder sB = new();
                     sB.AppendLine("Usage:");
-                    sB.AppendLine("-i | -input {filepath} to specify input json");
-                    sB.AppendLine("-o | -output {filepath} to specify output json");
+                    sB.AppendLine("-i | -input {filepath} to specify input json location");
+                    sB.AppendLine("-o | -output {filepath} to specify output json location");
                     sB.AppendLine("-u | -update to automatically get the latest amiibo.json from github, if the -i parameter is specified this will be saved to that path");
-                    sB.AppendLine("-l | -log {value} will set the logging level, can pick from verbose, info, warn, error or from 0 to 3 respectively");
-                    sB.AppendLine("-h | -help shows this message");
+                    sB.AppendLine("-l | -log {value} to set the logging level, can pick from verbose, info, warn, error or from 0 to 3 respectively");
+                    sB.AppendLine("-h | -help to show this message");
                     Debugger.Log(sB.ToString());
                     Environment.Exit(0);
                 }
