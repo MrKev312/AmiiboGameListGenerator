@@ -419,7 +419,15 @@ namespace AmiiboGameList
             {
                 Debugger.Log("Downloading latest amiibo.json from github");
                 using WebClient AmiiboJSONClient = new();
-                AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", inputPath);
+                try
+                {
+                    AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", inputPath);
+                }
+                catch (Exception e)
+                {
+                    Debugger.Log("Error while downloading amiibo.json, please check internet:\n" + e.Message, Debugger.DebugLevel.Error);
+                    Environment.Exit(-1);
+                }
             }
         }
     }
