@@ -31,7 +31,7 @@
         /// <value>The name of the game.</value>
         public string name
         {
-            get => nameField; set => this.nameField = value;
+            get => nameField; set => nameField = value;
         }
 
         /// <summary>Gets or sets the titleid.</summary>
