@@ -83,7 +83,7 @@ namespace AmiiboGameList
             // Iterate over all Amiibo's and get game info
             Parallel.ForEach(BRootobject.rootobject.amiibos, (DBamiibo) =>
             {
-                (Hex, Games) exportAmiibo = ParseAmiibo(DBamiibo, ref export, ref AmiiboCounter);
+                (Hex, Games) exportAmiibo = ParseAmiibo(DBamiibo);
                 export.Add(exportAmiibo.Item1, exportAmiibo.Item2);
 
                 // Show which amiibo just got added
@@ -118,7 +118,7 @@ namespace AmiiboGameList
 
         }
 
-        private static (Hex, Games) ParseAmiibo(KeyValuePair<Hex, DBAmiibo> DBamiibo, ref Dictionary<Hex, Games> export, ref int AmiiboCounter)
+        private static (Hex, Games) ParseAmiibo(KeyValuePair<Hex, DBAmiibo> DBamiibo)
         {
             WebClient AmiiboClient = new();
             Games ExAmiibo = new();
