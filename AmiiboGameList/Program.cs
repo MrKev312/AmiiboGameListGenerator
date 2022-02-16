@@ -36,7 +36,7 @@ namespace AmiiboGameList
         /// </summary>
         /// <returns></returns>
         /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             ParseArguments(args);
 
@@ -62,8 +62,8 @@ namespace AmiiboGameList
             }
             catch (Exception ex)
             {
-                Debugger.Log("Error laoding Wii U games:\n" + ex.Message, Debugger.DebugLevel.Error);
-                Environment.Exit(-2);
+                Debugger.Log("Error loading Wii U games:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
             }
 
             // Load 3DS games
@@ -78,15 +78,27 @@ namespace AmiiboGameList
             }
             catch (Exception ex)
             {
-                Debugger.Log("Error laoding 3DS games:\n" + ex.Message, Debugger.DebugLevel.Error);
-                Environment.Exit(-2);
+                Debugger.Log("Error loading 3DS games:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
             }
 
             // Load Switch games
             Debugger.Log("Loading Switch games");
             try
             {
-                Games.SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json"))
+                string BlawarDatabase = string.Empty;
+                // Try loading the database
+                try
+                {
+                    BlawarDatabase = client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json");
+                }
+                catch (Exception ex)
+                {
+                    Debugger.Log("Error while downloading switch database, please check internet:\n" + ex.Message, Debugger.DebugLevel.Error);
+                    Environment.Exit((int)Debugger.ReturnType.InternetError);
+                }
+                // Parse the loaded JSON
+                Games.SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(BlawarDatabase)
                     // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
                     .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
                     // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
@@ -94,8 +106,8 @@ namespace AmiiboGameList
             }
             catch (Exception ex)
             {
-                Debugger.Log("Error laoding switch games:\n" + ex.Message, Debugger.DebugLevel.Error);
-                Environment.Exit(-2);
+                Debugger.Log("Error loading switch games:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
             }
             Debugger.Log("Done loading!");
 
@@ -139,6 +151,11 @@ namespace AmiiboGameList
                 {
                     Debugger.Log("\t" + Game, Debugger.DebugLevel.Warn);
                 }
+                return (int)Debugger.ReturnType.SuccessWithErrors;
+            }
+            else
+            {
+                return (int)Debugger.ReturnType.Success;
             }
 
         }
@@ -451,7 +468,7 @@ namespace AmiiboGameList
                 catch (Exception e)
                 {
                     Debugger.Log("Error while downloading amiibo.json, please check internet:\n" + e.Message, Debugger.DebugLevel.Error);
-                    Environment.Exit(-1);
+                    Environment.Exit((int)Debugger.ReturnType.InternetError);
                 }
             }
         }

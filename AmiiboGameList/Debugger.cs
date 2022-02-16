@@ -13,6 +13,15 @@ namespace AmiiboGameList
             Error
         }
 
+        public enum ReturnType
+        {
+            Success = 2,
+            SuccessWithErrors = 1,
+            UnknownError = -1,
+            InternetError = -2,
+            DatabaseLoadingError = -3
+        }
+
         public static void Log(string Message) => Log(Message, DebugLevel.Info);
 
         public static void Log(string Message, DebugLevel Severity)
