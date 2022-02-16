@@ -72,9 +72,8 @@ namespace AmiiboGameList
             {
                 XmlSerializer serializer = new(typeof(DSreleases));
                 byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
-                MemoryStream stream = new(byteArray);
+                using MemoryStream stream = new(byteArray);
                 Games.DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
-                stream.Dispose();
             }
             catch (Exception ex)
             {
@@ -109,6 +108,8 @@ namespace AmiiboGameList
                 Debugger.Log("Error loading switch games:\n" + ex.Message, Debugger.DebugLevel.Error);
                 Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
             }
+
+            client.Dispose();
             Debugger.Log("Done loading!");
 
             // List to keep track of missing games
