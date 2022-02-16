@@ -13,7 +13,7 @@ using System.Xml.Serialization;
 
 namespace AmiiboGameList
 {
-    class Program
+    public class Program
     {
         /// <summary>
         /// The lazy instance of the AmiiboDataBase
@@ -35,7 +35,7 @@ namespace AmiiboGameList
         /// </summary>
         /// <returns></returns>
         /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             ParseArguments(args, out string inputPath, out string outputPath);
 
@@ -55,23 +55,47 @@ namespace AmiiboGameList
 
             // Load Wii U games
             Debugger.Log("Loading WiiU games");
-            Games.WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
+            try
+            {
+                Games.WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
+            }
+            catch (Exception ex)
+            {
+                Debugger.Log("Error laoding Wii U games:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Environment.Exit(-2);
+            }
 
             // Load 3DS games
             Debugger.Log("Loading 3DS games");
-            XmlSerializer serializer = new(typeof(DSreleases));
-            byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
-            MemoryStream stream = new(byteArray);
-            Games.DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
-            stream.Dispose();
+            try
+            {
+                XmlSerializer serializer = new(typeof(DSreleases));
+                byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
+                MemoryStream stream = new(byteArray);
+                Games.DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
+                stream.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debugger.Log("Error laoding 3DS games:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Environment.Exit(-2);
+            }
 
             // Load Switch games
             Debugger.Log("Loading Switch games");
-            Games.SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json"))
-                // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
-                .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
-                // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
-                .ToLookup(x => rx.Replace(x.Key, "").Replace('’', '\'').ToLower(), x => x.Value);
+            try
+            {
+                Games.SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json"))
+                    // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
+                    .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
+                    // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
+                    .ToLookup(x => rx.Replace(x.Key, "").Replace('’', '\'').ToLower(), x => x.Value);
+            }
+            catch (Exception ex)
+            {
+                Debugger.Log("Error laoding switch games:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Environment.Exit(-2);
+            }
             Debugger.Log("Done loading!");
 
             // List to keep track of missing games
