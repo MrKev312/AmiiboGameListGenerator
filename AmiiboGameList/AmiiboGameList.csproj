@@ -7,6 +7,12 @@
 		<Authors>MrKev312</Authors>
 		<NeutralLanguage>en</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
+		<PackageProjectUrl>https://github.com/MrKev312/AmiiboGameListGenerator</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/MrKev312/AmiiboGameListGenerator</RepositoryUrl>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -28,11 +34,4 @@
 			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
 		</EmbeddedResource>
 	</ItemGroup>
-
-	<ProjectExtensions>
-		<VisualStudio>
-			<UserProperties />
-		</VisualStudio>
-	</ProjectExtensions>
-
 </Project>
