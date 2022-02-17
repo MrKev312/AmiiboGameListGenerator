@@ -29,7 +29,9 @@ namespace AmiiboGameList
         public static DBRootobjectInstance BRootobject => lazy.Value;
 
         private static readonly WebClient client = new();
-        private static string inputPath, outputPath;
+        private static string inputPath;
+        private static string outputPath = @".\games_info.json";
+        private static readonly Dictionary<Hex, Games> export = new();
 
         /// <summary>
         /// Mains this instance.
@@ -45,14 +47,40 @@ namespace AmiiboGameList
 
             // Load Amiibo data
             Debugger.Log("Loading Amiibo's");
-            BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(File.ReadAllText(inputPath).Trim());
-            Dictionary<Hex, Games> export = new();
-
-            foreach (KeyValuePair<Hex, DBAmiibo> entry in BRootobject.rootobject.amiibos)
+            try
             {
-                entry.Value.ID = entry.Key;
+                string amiiboJSON = default;
+                if (string.IsNullOrEmpty(inputPath))
+                {
+                    Debugger.Log("Downloading amiibo database", Debugger.DebugLevel.Verbose);
+                    try
+                    {
+                        amiiboJSON = client.DownloadString("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json");
+                    }
+                    catch (Exception e)
+                    {
+                        Debugger.Log("Error while downloading amiibo.json, please check internet:\n" + e.Message, Debugger.DebugLevel.Error);
+                        Environment.Exit((int)Debugger.ReturnType.InternetError);
+                    }
+                }
+                else
+                {
+                    amiiboJSON = File.ReadAllText(inputPath);
+                }
+
+
+                BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(amiiboJSON);
+
+                foreach (KeyValuePair<Hex, DBAmiibo> entry in BRootobject.rootobject.amiibos)
+                {
+                    entry.Value.ID = entry.Key;
+                }
             }
-            // Make WebClient
+            catch (Exception ex)
+            {
+                Debugger.Log("Error loading amiibo.json:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
+            }
 
             // Load Wii U games
             Debugger.Log("Loading WiiU games");
@@ -70,9 +98,19 @@ namespace AmiiboGameList
             Debugger.Log("Loading 3DS games");
             try
             {
+                byte[] DSDatabase = default;
+                try
+                {
+                    Debugger.Log("Downloading 3DS database", Debugger.DebugLevel.Verbose);
+                    DSDatabase = client.DownloadData("http://3dsdb.com/xml.php");
+                }
+                catch (Exception ex)
+                {
+                    Debugger.Log("Error while downloading 3DS database, please check internet:\n" + ex.Message, Debugger.DebugLevel.Error);
+                    Environment.Exit((int)Debugger.ReturnType.InternetError);
+                }
                 XmlSerializer serializer = new(typeof(DSreleases));
-                byte[] byteArray = Encoding.UTF8.GetBytes(Properties.Resources.DS);
-                using MemoryStream stream = new(byteArray);
+                using MemoryStream stream = new(DSDatabase);
                 Games.DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
             }
             catch (Exception ex)
@@ -85,8 +123,9 @@ namespace AmiiboGameList
             Debugger.Log("Loading Switch games");
             try
             {
-                string BlawarDatabase = string.Empty;
+                string BlawarDatabase = default;
                 // Try loading the database
+                Debugger.Log("Downloading Switch database", Debugger.DebugLevel.Verbose);
                 try
                 {
                     BlawarDatabase = client.DownloadString("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json");
@@ -400,10 +439,6 @@ namespace AmiiboGameList
                 }
             }
 
-            // Set default values
-            inputPath = @".\amiibo.json";
-            outputPath = @".\games_info.json";
-            bool update = false;
             Debugger.CurrentDebugLevel = Debugger.DebugLevel.Info;
 
             // Loop through arguments
@@ -413,7 +448,7 @@ namespace AmiiboGameList
                 {
                     case "-i":
                     case "-input":
-                        if (File.Exists(args[i + 1]) || args.Contains("-i") || args.Contains("-update"))
+                        if (File.Exists(args[i + 1]) || args.Contains("-i"))
                         {
                             inputPath = args[i + 1];
                             i++;
@@ -435,10 +470,6 @@ namespace AmiiboGameList
                         {
                             throw new DirectoryNotFoundException($"Input directory '{args[i + 1]}' not found");
                         }
-                    case "-u":
-                    case "-update":
-                        update = true;
-                        break;
                     case "-l":
                     case "-log":
                         ;
@@ -454,22 +485,6 @@ namespace AmiiboGameList
                         }
                     default:
                         break;
-                }
-            }
-
-            // If update is set, download latest amiibo.json
-            if (update)
-            {
-                Debugger.Log("Downloading latest amiibo.json from github");
-                using WebClient AmiiboJSONClient = new();
-                try
-                {
-                    AmiiboJSONClient.DownloadFile("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json", inputPath);
-                }
-                catch (Exception e)
-                {
-                    Debugger.Log("Error while downloading amiibo.json, please check internet:\n" + e.Message, Debugger.DebugLevel.Error);
-                    Environment.Exit((int)Debugger.ReturnType.InternetError);
                 }
             }
         }

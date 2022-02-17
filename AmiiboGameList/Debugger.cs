@@ -22,7 +22,10 @@ namespace AmiiboGameList
             DatabaseLoadingError = -3
         }
 
-        public static void Log(string Message) => Log(Message, DebugLevel.Info);
+        public static void Log(string Message)
+        {
+            Log(Message, DebugLevel.Info);
+        }
 
         public static void Log(string Message, DebugLevel Severity)
         {

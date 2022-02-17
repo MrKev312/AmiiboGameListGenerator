@@ -19,7 +19,7 @@ namespace AmiiboGameList.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -57,30 +57,6 @@ namespace AmiiboGameList.Properties {
             }
             set {
                 resourceCulture = value;
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;
-        ///&lt;releases&gt;
-        ///&lt;release&gt;
-        ///	&lt;id&gt;1&lt;/id&gt;
-        ///	&lt;name&gt;Tom Clancys Ghost Recon: Shadow Wars&lt;/name&gt;
-        ///	&lt;publisher&gt;Ubisoft&lt;/publisher&gt;
-        ///	&lt;region&gt;EUR&lt;/region&gt;
-        ///	&lt;languages&gt;en,fr,de,it,es&lt;/languages&gt;
-        ///	&lt;group&gt;Legacy&lt;/group&gt;
-        ///	&lt;imagesize&gt;2048&lt;/imagesize&gt;
-        ///	&lt;serial&gt;CTR-AGRP&lt;/serial&gt;
-        ///	&lt;titleid&gt;0004000000037500&lt;/titleid&gt;
-        ///	&lt;imgcrc&gt;5BD0B123&lt;/imgcrc&gt;
-        ///	&lt;filename&gt;lgc-grsw&lt;/filename&gt;
-        ///	&lt;releasename&gt;Tom_Clancys_Ghost_Recon_Shadow_Wars_EUR_3DS-LGC&lt;/releasename&gt;
-        ///	&lt;trimmedsize&gt;229750272&lt;/trimm [rest of string was truncated]&quot;;.
-        /// </summary>
-        internal static string DS {
-            get {
-                return ResourceManager.GetString("DS", resourceCulture);
             }
         }
         
