@@ -164,7 +164,23 @@ namespace AmiiboGameList
             // Iterate over all amiibo and get game info
             Parallel.ForEach(BRootobject.rootobject.amiibos, (DBamiibo) =>
             {
-                Games exportAmiibo = ParseAmiibo(DBamiibo.Value);
+                Games exportAmiibo = default;
+                try
+                {
+                    exportAmiibo = ParseAmiibo(DBamiibo.Value);
+                }
+                catch (WebException ex)
+                {
+                    Debugger.Log($"Internet error when processing {DBamiibo.Value.Name} ({DBamiibo.Value.OriginalName})\n{ex.Message}", Debugger.DebugLevel.Error);
+                    Environment.Exit((int)Debugger.ReturnType.InternetError);
+                }
+                catch (Exception ex)
+                {
+                    Debugger.Log($"Unexpected error when processing {DBamiibo.Value.Name} ({DBamiibo.Value.OriginalName})\n{ex.Message}", Debugger.DebugLevel.Error);
+                    Environment.Exit((int)Debugger.ReturnType.UnknownError);
+                }
+
+
                 export.Add(DBamiibo.Key, exportAmiibo);
 
                 // Show which amiibo just got added
@@ -229,15 +245,15 @@ namespace AmiiboGameList
             if (DBamiibo.type == "Card" && DBamiibo.amiiboSeries == "Animal Crossing")
             {
                 // Look amiibo up
-                HtmlDocument htmlDoc = new();
-                htmlDoc.LoadHtml(
+                HtmlDocument AmiiboLookup = new();
+                AmiiboLookup.LoadHtml(
                     WebUtility.HtmlDecode(
                         AmiiboClient.DownloadString("https://amiibo.life/search?q=" + DBamiibo.characterName)
                         )
                     );
 
                 // Filter for card amiibo only and get url
-                foreach (HtmlNode item in htmlDoc.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
+                foreach (HtmlNode item in AmiiboLookup.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
                 {
                     if (item.ChildNodes[1].GetAttributeValue("href", string.Empty).Contains("cards"))
                     {
@@ -258,155 +274,145 @@ namespace AmiiboGameList
                     url = "https://amiibo.life/amiibo/dark-souls/solaire-of-astora";
                     break;
             }
-            try
+            client.Encoding = Encoding.Unicode;
+            HtmlDocument htmlDoc = new();
+            htmlDoc.LoadHtml(
+                WebUtility.HtmlDecode(
+                    AmiiboClient.DownloadString(url)
+                    )
+                );
+
+            // Dispose of the WebClient because we don't need it anymore
+            AmiiboClient.Dispose();
+
+            // Get the games panel
+            HtmlNodeCollection GamesPanel = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a");
+            if (GamesPanel.Count == 0)
             {
-                client.Encoding = Encoding.Unicode;
-                HtmlDocument htmlDoc = new();
-                htmlDoc.LoadHtml(
-                    WebUtility.HtmlDecode(
-                        AmiiboClient.DownloadString(url)
-                        )
-                    );
+                Debugger.Log("No games found for " + DBamiibo.Name, Debugger.DebugLevel.Verbose);
+            }
 
-                // Dispose of the WebClient because we don't need it anymore
-                AmiiboClient.Dispose();
-
-                // Get the games panel
-                HtmlNodeCollection GamesPanel = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a");
-                if (GamesPanel.Count == 0)
-                {
-                    Debugger.Log("No games found for " + DBamiibo.Name, Debugger.DebugLevel.Verbose);
-                }
-
-                // Iterate over each game in the games panel
-                Parallel.ForEach(GamesPanel, node =>
-                {
+            // Iterate over each game in the games panel
+            Parallel.ForEach(GamesPanel, node =>
+            {
                     // Get the name of the game
                     Game game = new()
-                    {
-                        gameName = node.SelectSingleNode(".//*[@class='name']/text()[normalize-space()]").InnerText.Trim().Replace("Poochy & ", "").Trim().Replace("Ace Combat Assault Horizon Legacy +", "Ace Combat Assault Horizon Legacy+").Replace("Power Pros", "Jikkyou Powerful Pro Baseball"),
-                        gameID = new(),
-                        amiiboUsage = new()
-                    };
+                {
+                    gameName = node.SelectSingleNode(".//*[@class='name']/text()[normalize-space()]").InnerText.Trim().Replace("Poochy & ", "").Trim().Replace("Ace Combat Assault Horizon Legacy +", "Ace Combat Assault Horizon Legacy+").Replace("Power Pros", "Jikkyou Powerful Pro Baseball"),
+                    gameID = new(),
+                    amiiboUsage = new()
+                };
 
                     // Get the amiibo usages
                     foreach (HtmlNode amiiboUsage in node.SelectNodes(".//*[@class='features']/li"))
+                {
+                    game.amiiboUsage.Add(new()
                     {
-                        game.amiiboUsage.Add(new()
-                        {
-                            Usage = amiiboUsage.GetDirectInnerText().Trim(),
-                            write = amiiboUsage.SelectSingleNode("em")?.InnerText == "(Read+Write)"
-                        });
-                    }
+                        Usage = amiiboUsage.GetDirectInnerText().Trim(),
+                        write = amiiboUsage.SelectSingleNode("em")?.InnerText == "(Read+Write)"
+                    });
+                }
 
-                    if (DBamiibo.Name == "Shadow Mewtwo")
-                    {
-                        game.gameName = "Pokkén Tournament";
-                    }
+                if (DBamiibo.Name == "Shadow Mewtwo")
+                {
+                    game.gameName = "Pokkén Tournament";
+                }
 
                     // Add game to the correct console and get correct titleid
                     Regex rgx = new("[^a-zA-Z0-9 -]");
-                    switch (node.SelectSingleNode(".//*[@class='name']/span").InnerText.Trim().ToLower())
-                    {
-                        case "switch":
-                            try
-                            {
-                                game.gameID = Games.SwitchGames[game.sanatizedGameName.ToLower()].ToList();
-                                HtmlDocument htmlDoc = new();
+                switch (node.SelectSingleNode(".//*[@class='name']/span").InnerText.Trim().ToLower())
+                {
+                    case "switch":
+                        try
+                        {
+                            game.gameID = Games.SwitchGames[game.sanatizedGameName.ToLower()].ToList();
+                            HtmlDocument htmlDoc = new();
 
-                                if (game.gameID.Count == 0)
+                            if (game.gameID.Count == 0)
+                            {
+                                game.gameID = game.sanatizedGameName switch
                                 {
-                                    game.gameID = game.sanatizedGameName switch
-                                    {
-                                        "Cyber Shadow" => new() { "0100C1F0141AA000" },
-                                        "Jikkyou Powerful Pro Baseball" => new() { "0100E9C00BF28000" },
-                                        "Super Kirby Clash" => new() { "01003FB00C5A8000" },
-                                        "Shovel Knight Showdown" => new() { "0100B380022AE000" },
-                                        "The Legend of Zelda: Skyward Sword HD" => new() { "01002DA013484000" },
-                                        "Yu-Gi-Oh! Rush Duel Saikyo Battle Royale" => new() { "01003C101454A000" },
-                                        _ => throw new Exception()
-                                    };
-                                }
+                                    "Cyber Shadow" => new() { "0100C1F0141AA000" },
+                                    "Jikkyou Powerful Pro Baseball" => new() { "0100E9C00BF28000" },
+                                    "Super Kirby Clash" => new() { "01003FB00C5A8000" },
+                                    "Shovel Knight Showdown" => new() { "0100B380022AE000" },
+                                    "The Legend of Zelda: Skyward Sword HD" => new() { "01002DA013484000" },
+                                    "Yu-Gi-Oh! Rush Duel Saikyo Battle Royale" => new() { "01003C101454A000" },
+                                    _ => throw new Exception()
+                                };
+                            }
 
-                                game.gameID = game.gameID.Distinct().ToList();
-                                ExAmiibo.gamesSwitch.Add(game);
-                            }
-                            catch
+                            game.gameID = game.gameID.Distinct().ToList();
+                            ExAmiibo.gamesSwitch.Add(game);
+                        }
+                        catch
+                        {
+                            Games.missingGames.Add(game.gameName + " (Switch)");
+                        }
+                        break;
+                    case "wii u":
+                        try
+                        {
+                            string[] gameIDs = Games.WiiUGames.Find(WiiUGame => WiiUGame.Name.Contains(game.gameName, StringComparer.OrdinalIgnoreCase))?.Ids;
+                            if (gameIDs?.Length == 0 || gameIDs == null)
                             {
-                                Games.missingGames.Add(game.gameName + " (Switch)");
+                                game.gameID = game.gameName switch
+                                {
+                                    "Shovel Knight Showdown" => new() { "000500001016E100", "0005000010178F00", "0005000E1016E100", "0005000E10178F00", "0005000E101D9300" },
+                                    _ => throw new Exception()
+                                };
                             }
-                            break;
-                        case "wii u":
-                            try
+                            else
                             {
-                                string[] gameIDs = Games.WiiUGames.Find(WiiUGame => WiiUGame.Name.Contains(game.gameName, StringComparer.OrdinalIgnoreCase))?.Ids;
-                                if (gameIDs?.Length == 0 || gameIDs == null)
+                                foreach (string ID in gameIDs)
                                 {
-                                    game.gameID = game.gameName switch
-                                    {
-                                        "Shovel Knight Showdown" => new() { "000500001016E100", "0005000010178F00", "0005000E1016E100", "0005000E10178F00", "0005000E101D9300" },
-                                        _ => throw new Exception()
-                                    };
+                                    game.gameID.Add(ID[..16]);
                                 }
-                                else
-                                {
-                                    foreach (string ID in gameIDs)
-                                    {
-                                        game.gameID.Add(ID[..16]);
-                                    }
-                                }
+                            }
 
-                                game.gameID = game.gameID.Distinct().ToList();
-                                ExAmiibo.gamesWiiU.Add(game);
-                            }
-                            catch
+                            game.gameID = game.gameID.Distinct().ToList();
+                            ExAmiibo.gamesWiiU.Add(game);
+                        }
+                        catch
+                        {
+                            Games.missingGames.Add(game.gameName + " (Wii U)");
+                        }
+                        break;
+                    case "3ds":
+                        try
+                        {
+                            List<DSreleasesRelease> games = Games.DSGames.FindAll(DSGame => rgx.Replace(WebUtility.HtmlDecode(DSGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
+                            if (games.Count == 0)
                             {
-                                Games.missingGames.Add(game.gameName + " (Wii U)");
-                            }
-                            break;
-                        case "3ds":
-                            try
-                            {
-                                List<DSreleasesRelease> games = Games.DSGames.FindAll(DSGame => rgx.Replace(WebUtility.HtmlDecode(DSGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
-                                if (games.Count == 0)
+                                game.gameID = game.gameName switch
                                 {
-                                    game.gameID = game.gameName switch
-                                    {
-                                        "Style Savvy: Styling Star" => new() { "00040000001C2500" },
-                                        "Metroid Prime: Blast Ball" => new() { "0004000000175300" },
-                                        "Mini Mario & Friends amiibo Challenge" => new() { "000400000016C300", "000400000016C200" },
-                                        "Team Kirby Clash Deluxe" => new() { "00040000001AB900", "00040000001AB800" },
-                                        "Kirby's Extra Epic Yarn" => new() { "00040000001D1F00" },
-                                        "Kirby's Blowout Blast" => new() { "0004000000196F00" },
-                                        "BYE-BYE BOXBOY!" => new() { "00040000001B5400", "00040000001B5300" },
-                                        "Azure Striker Gunvolt 2" => new() { "00040000001A6E00" },
-                                        "niconico app" => new() { "0005000010116400" },
-                                        _ => throw new Exception(),
-                                    };
-                                }
-                                games.ForEach(DSGame =>
-                                    game.gameID.Add(DSGame.titleid[..16]));
+                                    "Style Savvy: Styling Star" => new() { "00040000001C2500" },
+                                    "Metroid Prime: Blast Ball" => new() { "0004000000175300" },
+                                    "Mini Mario & Friends amiibo Challenge" => new() { "000400000016C300", "000400000016C200" },
+                                    "Team Kirby Clash Deluxe" => new() { "00040000001AB900", "00040000001AB800" },
+                                    "Kirby's Extra Epic Yarn" => new() { "00040000001D1F00" },
+                                    "Kirby's Blowout Blast" => new() { "0004000000196F00" },
+                                    "BYE-BYE BOXBOY!" => new() { "00040000001B5400", "00040000001B5300" },
+                                    "Azure Striker Gunvolt 2" => new() { "00040000001A6E00" },
+                                    "niconico app" => new() { "0005000010116400" },
+                                    _ => throw new Exception(),
+                                };
+                            }
+                            games.ForEach(DSGame =>
+                                game.gameID.Add(DSGame.titleid[..16]));
 
-                                game.gameID = game.gameID.Distinct().ToList();
-                                ExAmiibo.games3DS.Add(game);
-                            }
-                            catch
-                            {
-                                Games.missingGames.Add(game.gameName + " (3DS)");
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                });
-            }
-            catch (Exception e)
-            {
-                Debugger.Log(
-                    $"Error caught:\n" +
-                    $"{url}\n\t" +
-                    $"{ e }", Debugger.DebugLevel.Error);
-            }
+                            game.gameID = game.gameID.Distinct().ToList();
+                            ExAmiibo.games3DS.Add(game);
+                        }
+                        catch
+                        {
+                            Games.missingGames.Add(game.gameName + " (3DS)");
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
 
             // Sort all gamelists
             ExAmiibo.gamesSwitch.Sort();
