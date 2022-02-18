@@ -45,8 +45,8 @@ namespace AmiiboGameList
             // Load Regex for removing copyrights, trademarks, etc.
             Regex rx = new(@"[®™]", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-            // Load Amiibo data
-            Debugger.Log("Loading Amiibo's");
+            // Load amiibo data
+            Debugger.Log("Loading amiibo");
             try
             {
                 string amiiboJSON = default;
@@ -144,7 +144,7 @@ namespace AmiiboGameList
             }
             catch (Exception ex)
             {
-                Debugger.Log("Error loading switch games:\n" + ex.Message, Debugger.DebugLevel.Error);
+                Debugger.Log("Error loading Switch games:\n" + ex.Message, Debugger.DebugLevel.Error);
                 Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
             }
 
@@ -154,10 +154,11 @@ namespace AmiiboGameList
             // List to keep track of missing games
             Games.missingGames = new();
 
-            // Counter to keep track of how many amiibos we've done
+            // Counter to keep track of how many amiibo we've done
             int AmiiboCounter = 0;
 
-            // Iterate over all Amiibo's and get game info
+            Debugger.Log("Processing amiibo");
+            // Iterate over all amiibo and get game info
             Parallel.ForEach(BRootobject.rootobject.amiibos, (DBamiibo) =>
             {
                 (Hex, Games) exportAmiibo = ParseAmiibo(DBamiibo);
@@ -232,7 +233,7 @@ namespace AmiiboGameList
                         )
                     );
 
-                // Filter for card amiibos only and get url
+                // Filter for card amiibo only and get url
                 foreach (HtmlNode item in htmlDoc.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
                 {
                     if (item.ChildNodes[1].GetAttributeValue("href", string.Empty).Contains("cards"))
@@ -243,7 +244,7 @@ namespace AmiiboGameList
                 }
             }
 
-            // Handle amiibos where gameseries is set to others
+            // Handle amiibo where gameseries is set to others
             switch (url)
             {
                 case "https://amiibo.life/amiibo/others/super-mario-cereal":

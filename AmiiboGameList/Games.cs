@@ -82,7 +82,7 @@ namespace AmiiboGameList
     {
         /// <summary>String explaining how the amiibo will be used in a game.</summary>
         public string Usage;
-        /// <summary>Bool to signify if this AmiiboUsage will write to the Amiibo.</summary>
+        /// <summary>Bool to signify if this AmiiboUsage will write to the amiibo.</summary>
         public bool write;
     }
 }

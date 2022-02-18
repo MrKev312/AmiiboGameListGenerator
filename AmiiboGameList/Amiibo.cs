@@ -24,7 +24,7 @@ namespace AmiiboGameList
         public Dictionary<string, string> types = new();
     }
 
-    /// <summary>Amiibo class for Amiibo's from the database.</summary>
+    /// <summary>Amiibo class for amiibo from the database.</summary>
     public class DBAmiibo
     {
         public string OriginalName;
