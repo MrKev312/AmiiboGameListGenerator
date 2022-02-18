@@ -180,7 +180,6 @@ namespace AmiiboGameList
                     Environment.Exit((int)Debugger.ReturnType.UnknownError);
                 }
 
-
                 export.Add(DBamiibo.Key, exportAmiibo);
 
                 // Show which amiibo just got added
@@ -295,16 +294,16 @@ namespace AmiiboGameList
             // Iterate over each game in the games panel
             Parallel.ForEach(GamesPanel, node =>
             {
-                    // Get the name of the game
-                    Game game = new()
+                // Get the name of the game
+                Game game = new()
                 {
                     gameName = node.SelectSingleNode(".//*[@class='name']/text()[normalize-space()]").InnerText.Trim().Replace("Poochy & ", "").Trim().Replace("Ace Combat Assault Horizon Legacy +", "Ace Combat Assault Horizon Legacy+").Replace("Power Pros", "Jikkyou Powerful Pro Baseball"),
                     gameID = new(),
                     amiiboUsage = new()
                 };
 
-                    // Get the amiibo usages
-                    foreach (HtmlNode amiiboUsage in node.SelectNodes(".//*[@class='features']/li"))
+                // Get the amiibo usages
+                foreach (HtmlNode amiiboUsage in node.SelectNodes(".//*[@class='features']/li"))
                 {
                     game.amiiboUsage.Add(new()
                     {
@@ -318,8 +317,8 @@ namespace AmiiboGameList
                     game.gameName = "Pokkén Tournament";
                 }
 
-                    // Add game to the correct console and get correct titleid
-                    Regex rgx = new("[^a-zA-Z0-9 -]");
+                // Add game to the correct console and get correct titleid
+                Regex rgx = new("[^a-zA-Z0-9 -]");
                 switch (node.SelectSingleNode(".//*[@class='name']/span").InnerText.Trim().ToLower())
                 {
                     case "switch":
