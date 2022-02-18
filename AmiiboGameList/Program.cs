@@ -164,8 +164,8 @@ namespace AmiiboGameList
             // Iterate over all amiibo and get game info
             Parallel.ForEach(BRootobject.rootobject.amiibos, (DBamiibo) =>
             {
-                (Hex, Games) exportAmiibo = ParseAmiibo(DBamiibo);
-                export.Add(exportAmiibo.Item1, exportAmiibo.Item2);
+                Games exportAmiibo = ParseAmiibo(DBamiibo.Value);
+                export.Add(DBamiibo.Key, exportAmiibo);
 
                 // Show which amiibo just got added
                 AmiiboCounter++;
@@ -204,18 +204,18 @@ namespace AmiiboGameList
 
         }
 
-        private static (Hex, Games) ParseAmiibo(KeyValuePair<Hex, DBAmiibo> DBamiibo)
+        private static Games ParseAmiibo(DBAmiibo DBamiibo)
         {
             WebClient AmiiboClient = new();
             Games ExAmiibo = new();
-            string GameSeriesURL = DBamiibo.Value.amiiboSeries.ToLower();
+            string GameSeriesURL = DBamiibo.amiiboSeries.ToLower();
 
             // Regex to cleanup url
             GameSeriesURL = Regex.Replace(GameSeriesURL, @"[!.]", "");
             GameSeriesURL = Regex.Replace(GameSeriesURL, @"[' ]", "-");
 
             // Start making the url
-            string url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/{ DBamiibo.Value.Name.Replace(" ", "-").ToLower() }";
+            string url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/{ DBamiibo.Name.Replace(" ", "-").ToLower() }";
 
             // Handle cat in getter for name
             // TODO: move to Amiibo.cs
@@ -226,13 +226,13 @@ namespace AmiiboGameList
 
             // If the amiibo is an animal crossing card, look name up on site and get the first link
             // TODO: error if no link is found
-            if (DBamiibo.Value.type == "Card" && DBamiibo.Value.amiiboSeries == "Animal Crossing")
+            if (DBamiibo.type == "Card" && DBamiibo.amiiboSeries == "Animal Crossing")
             {
                 // Look amiibo up
                 HtmlDocument htmlDoc = new();
                 htmlDoc.LoadHtml(
                     WebUtility.HtmlDecode(
-                        AmiiboClient.DownloadString("https://amiibo.life/search?q=" + DBamiibo.Value.characterName)
+                        AmiiboClient.DownloadString("https://amiibo.life/search?q=" + DBamiibo.characterName)
                         )
                     );
 
@@ -275,7 +275,7 @@ namespace AmiiboGameList
                 HtmlNodeCollection GamesPanel = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a");
                 if (GamesPanel.Count == 0)
                 {
-                    Debugger.Log("No games found for " + DBamiibo.Value.Name, Debugger.DebugLevel.Verbose);
+                    Debugger.Log("No games found for " + DBamiibo.Name, Debugger.DebugLevel.Verbose);
                 }
 
                 // Iterate over each game in the games panel
@@ -299,7 +299,7 @@ namespace AmiiboGameList
                         });
                     }
 
-                    if (DBamiibo.Value.Name == "Shadow Mewtwo")
+                    if (DBamiibo.Name == "Shadow Mewtwo")
                     {
                         game.gameName = "Pokkén Tournament";
                     }
@@ -414,7 +414,7 @@ namespace AmiiboGameList
             ExAmiibo.games3DS.Sort();
 
             // Return the created amiibo
-            return (DBamiibo.Key, ExAmiibo);
+            return ExAmiibo;
         }
 
         private static void ParseArguments(string[] args)
