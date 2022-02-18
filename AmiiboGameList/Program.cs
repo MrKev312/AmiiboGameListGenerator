@@ -68,7 +68,7 @@ namespace AmiiboGameList
                     amiiboJSON = File.ReadAllText(inputPath);
                 }
 
-
+                Debugger.Log("Processing amiibo database", Debugger.DebugLevel.Verbose);
                 BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(amiiboJSON);
 
                 foreach (KeyValuePair<Hex, DBAmiibo> entry in BRootobject.rootobject.amiibos)
@@ -83,7 +83,8 @@ namespace AmiiboGameList
             }
 
             // Load Wii U games
-            Debugger.Log("Loading WiiU games");
+            Debugger.Log("Loading Wii U games");
+            Debugger.Log("Processing Wii U database", Debugger.DebugLevel.Verbose);
             try
             {
                 Games.WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
@@ -109,6 +110,7 @@ namespace AmiiboGameList
                     Debugger.Log("Error while downloading 3DS database, please check internet:\n" + ex.Message, Debugger.DebugLevel.Error);
                     Environment.Exit((int)Debugger.ReturnType.InternetError);
                 }
+                Debugger.Log("Processing 3DS database", Debugger.DebugLevel.Verbose);
                 XmlSerializer serializer = new(typeof(DSreleases));
                 using MemoryStream stream = new(DSDatabase);
                 Games.DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
@@ -135,6 +137,7 @@ namespace AmiiboGameList
                     Debugger.Log("Error while downloading switch database, please check internet:\n" + ex.Message, Debugger.DebugLevel.Error);
                     Environment.Exit((int)Debugger.ReturnType.InternetError);
                 }
+                Debugger.Log("Processing Switch database", Debugger.DebugLevel.Verbose);
                 // Parse the loaded JSON
                 Games.SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(BlawarDatabase)
                     // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
