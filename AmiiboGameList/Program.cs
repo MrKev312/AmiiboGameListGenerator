@@ -171,7 +171,7 @@ namespace AmiiboGameList
                 }
                 catch (WebException ex)
                 {
-                    Debugger.Log($"Internet error when processing {DBamiibo.Value.Name} ({DBamiibo.Value.OriginalName})\n{ex.Message}", Debugger.DebugLevel.Error);
+                    Debugger.Log($"Internet error when processing {DBamiibo.Value.Name} ({DBamiibo.Value.OriginalName})\n{ex.Message}\n{DBamiibo.Value.URL}", Debugger.DebugLevel.Error);
                     Environment.Exit((int)Debugger.ReturnType.InternetError);
                 }
                 catch (Exception ex)
@@ -223,61 +223,13 @@ namespace AmiiboGameList
         {
             WebClient AmiiboClient = new();
             Games ExAmiibo = new();
-            string GameSeriesURL = DBamiibo.amiiboSeries.ToLower();
 
-            // Regex to cleanup url
-            GameSeriesURL = Regex.Replace(GameSeriesURL, @"[!.]", "");
-            GameSeriesURL = Regex.Replace(GameSeriesURL, @"[' ]", "-");
 
-            // Start making the url
-            string url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/{ DBamiibo.Name.Replace(" ", "-").ToLower() }";
-
-            // Handle cat in getter for name
-            // TODO: move to Amiibo.cs
-            if (url.EndsWith("cat"))
-            {
-                url = url.Insert(url.LastIndexOf('/') + 1, "cat-")[..url.Length];
-            }
-
-            // If the amiibo is an animal crossing card, look name up on site and get the first link
-            // TODO: error if no link is found
-            if (DBamiibo.type == "Card" && DBamiibo.amiiboSeries == "Animal Crossing")
-            {
-                // Look amiibo up
-                HtmlDocument AmiiboLookup = new();
-                AmiiboLookup.LoadHtml(
-                    WebUtility.HtmlDecode(
-                        AmiiboClient.DownloadString("https://amiibo.life/search?q=" + DBamiibo.characterName)
-                        )
-                    );
-
-                // Filter for card amiibo only and get url
-                foreach (HtmlNode item in AmiiboLookup.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
-                {
-                    if (item.ChildNodes[1].GetAttributeValue("href", string.Empty).Contains("cards"))
-                    {
-                        url = "https://amiibo.life" + item.ChildNodes[1].GetAttributeValue("href", string.Empty);
-                        break;
-                    }
-                }
-            }
-
-            // Handle amiibo where gameseries is set to others
-            switch (url)
-            {
-                case "https://amiibo.life/amiibo/others/super-mario-cereal":
-                    url = "https://amiibo.life/amiibo/super-mario-cereal/super-mario-cereal";
-                    break;
-
-                case "https://amiibo.life/amiibo/others/solaire-of-astora":
-                    url = "https://amiibo.life/amiibo/dark-souls/solaire-of-astora";
-                    break;
-            }
             client.Encoding = Encoding.Unicode;
             HtmlDocument htmlDoc = new();
             htmlDoc.LoadHtml(
                 WebUtility.HtmlDecode(
-                    AmiiboClient.DownloadString(url)
+                    AmiiboClient.DownloadString(DBamiibo.URL)
                     )
                 );
 

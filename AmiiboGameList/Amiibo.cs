@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using HtmlAgilityPack;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Text.RegularExpressions;
 
 namespace AmiiboGameList
 {
@@ -29,12 +33,12 @@ namespace AmiiboGameList
     {
         public string OriginalName;
         public Hex ID;
+        private Lazy<string> name;
+        private Lazy<string> url;
 
-        /// <summary>Gets or sets the name.</summary>
-        /// <value>The name.</value>
-        public string Name
+        public DBAmiibo()
         {
-            get
+            name = new Lazy<string>(() =>
             {
                 string ReturnName = OriginalName switch
                 {
@@ -63,8 +67,71 @@ namespace AmiiboGameList
                 ReturnName = ReturnName.Replace(" - ", " ");
 
                 return ReturnName.Trim();
-            }
-            set => OriginalName = value;
+            });
+            url = new Lazy<string>(() =>
+            {
+                string url = default;
+                // If the amiibo is an animal crossing card, look name up on site and get the first link
+                if (type == "Card" && amiiboSeries == "Animal Crossing")
+                {
+                    // Look amiibo up
+                    HtmlDocument AmiiboLookup = new();
+                    AmiiboLookup.LoadHtml(
+                        WebUtility.HtmlDecode(
+                            new WebClient().DownloadString("https://amiibo.life/search?q=" + characterName)
+                            )
+                        );
+
+                    // Filter for card amiibo only and get url
+                    foreach (HtmlNode item in AmiiboLookup.DocumentNode.SelectNodes("//ul[@class='figures-cards small-block-grid-2 medium-block-grid-4 large-block-grid-4']/li"))
+                    {
+                        if (item.ChildNodes[1].GetAttributeValue("href", string.Empty).Contains("cards"))
+                        {
+                            url = "https://amiibo.life" + item.ChildNodes[1].GetAttributeValue("href", string.Empty);
+                            break;
+                        }
+                    }
+                    return url;
+                }
+                else
+                {
+                    // Handle amiibo where gameseries is set to others
+                    switch (Name.ToLower())
+                    {
+                        case "super mario cereal":
+                            return "https://amiibo.life/amiibo/super-mario-cereal/super-mario-cereal";
+
+                        case "solaire of astora":
+                            return "https://amiibo.life/amiibo/dark-souls/solaire-of-astora";
+
+                        default:
+                            string GameSeriesURL = amiiboSeries.ToLower();
+
+                            // Regex to cleanup url
+                            GameSeriesURL = Regex.Replace(GameSeriesURL, @"[!.]", "");
+                            GameSeriesURL = Regex.Replace(GameSeriesURL, @"[' ]", "-");
+
+                            url = $"https://amiibo.life/amiibo/{ GameSeriesURL }/{ Name.Replace(" ", "-").ToLower() }";
+
+                            // Handle cat in getter for name
+                            if (url.EndsWith("cat"))
+                            {
+                                url = url.Insert(url.LastIndexOf('/') + 1, "cat-")[..url.Length];
+                            }
+                            return url;
+                    }
+                }
+            });
+        }
+
+        public string URL { get => url.Value; }
+
+        /// <summary>Gets or sets the name.</summary>
+        /// <value>The name.</value>
+        public string Name
+        {
+            get => name.Value;
+            set { OriginalName = value; }
         }
 
         /// <summary>Gets the name of the character.</summary>
