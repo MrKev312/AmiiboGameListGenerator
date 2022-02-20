@@ -184,7 +184,7 @@ namespace AmiiboGameList
 
                 // Show which amiibo just got added
                 AmiiboCounter++;
-                Debugger.Log($"{ AmiiboCounter:D3}/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })", Debugger.DebugLevel.Verbose);
+                Debugger.Log($"{ AmiiboCounter:D3 }/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })", Debugger.DebugLevel.Verbose);
             });
 
             // Sort export object
