@@ -159,6 +159,7 @@ namespace AmiiboGameList
 
             // Counter to keep track of how many amiibo we've done
             int AmiiboCounter = 0;
+            int TotalAmiibo = BRootobject.rootobject.amiibos.Count;
 
             Debugger.Log("Processing amiibo");
             // Iterate over all amiibo and get game info
@@ -184,7 +185,7 @@ namespace AmiiboGameList
 
                 // Show which amiibo just got added
                 AmiiboCounter++;
-                Debugger.Log($"{ AmiiboCounter:D3 }/{ BRootobject.rootobject.amiibos.Count } Done with { DBamiibo.Value.OriginalName } ({ DBamiibo.Value.amiiboSeries })", Debugger.DebugLevel.Verbose);
+                Debugger.Log($"{AmiiboCounter:D3}/{TotalAmiibo} Done with {DBamiibo.Value.OriginalName} ({DBamiibo.Value.amiiboSeries})", Debugger.DebugLevel.Verbose);
             });
 
             // Sort export object
