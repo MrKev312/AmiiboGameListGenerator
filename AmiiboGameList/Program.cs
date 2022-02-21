@@ -377,11 +377,6 @@ namespace AmiiboGameList
 
         private static void ParseArguments(string[] args)
         {
-            // Make arguments lowercase
-            for (int i = 0; i < args.Length; i++)
-            {
-                args[i] = args[i].ToLowerInvariant();
-            }
             if (args.Length != 0)
             {
                 Debugger.Log($"Running with these arguments: {string.Join(' ', args)}");
@@ -405,7 +400,7 @@ namespace AmiiboGameList
             // Loop through arguments
             for (int i = 0; i < args.Length; i++)
             {
-                switch (args[i])
+                switch (args[i].ToLowerInvariant())
                 {
                     case "-i":
                     case "-input":
