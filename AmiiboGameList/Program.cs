@@ -384,7 +384,7 @@ namespace AmiiboGameList
             }
             if (args.Length != 0)
             {
-                Debugger.Log($"Running with these arguments: {string.Join(' ', args)}\n");
+                Debugger.Log($"Running with these arguments: {string.Join(' ', args)}");
 
                 // Show help message
                 if (args.Contains("-h") || args.Contains("-help"))
@@ -433,10 +433,10 @@ namespace AmiiboGameList
                         }
                     case "-l":
                     case "-log":
-                        ;
-                        if (Enum.TryParse(args[i + 1], true, out Debugger.DebugLevel debugLevel))
+                        if (Enum.TryParse(args[i + 1], true, out Debugger.DebugLevel debugLevel) && Enum.IsDefined(typeof(Debugger.DebugLevel), debugLevel))
                         {
                             Debugger.CurrentDebugLevel = debugLevel;
+                            Debugger.Log($"Setting DebugLevel to {Enum.GetName(typeof(Debugger.DebugLevel), debugLevel)}", Debugger.DebugLevel.Verbose);
                             i++;
                             continue;
                         }
