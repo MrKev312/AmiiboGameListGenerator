@@ -443,6 +443,8 @@ namespace AmiiboGameList
                         break;
                 }
             }
+            Debugger.Log("Done parsing arguments", Debugger.DebugLevel.Verbose);
+            Debugger.Log(default);
         }
     }
 }
