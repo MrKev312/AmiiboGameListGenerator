@@ -33,8 +33,8 @@ namespace AmiiboGameList
     {
         public string OriginalName;
         public Hex ID;
-        private Lazy<string> name;
-        private Lazy<string> url;
+        private readonly Lazy<string> name;
+        private readonly Lazy<string> url;
 
         public DBAmiibo()
         {
