@@ -1,538 +1,285 @@
-﻿using System.Net;
+﻿using AmiiboGameList.Models;
+using AmiiboGameList.Services;
+using AmiiboGameList.Utility;
+
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Web;
-using System.Xml.Serialization;
-using AmiiboGameList.ConsoleClasses;
-using HtmlAgilityPack;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace AmiiboGameList;
 
+public enum ExitCode
+{
+	Success = 0,
+	SuccessWithErrors = 1,
+	UnknownError = -1,
+	NetworkError = -2,
+	DatabaseLoadingError = -3,
+	ArgumentError = -4
+}
+
 public class Program
 {
-    /// <summary>
-    /// A shared HttpClient instance to be used throughout the program.
-    /// </summary>
-    public static HttpClient client = new();
+	private static ConsoleLogger _logger;
 
-    /// <summary>
-    /// The lazy instance of the AmiiboDataBase
-    /// </summary>
-    private static readonly Lazy<DBRootobjectInstance> lazy = new(() => new DBRootobjectInstance());
+	private static readonly JsonSerializerOptions jsonOptions = new()
+	{
+		WriteIndented = true,
+		DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+	};
 
-    /// <summary>
-    /// Gets the instance of the AmiiboDataBase.
-    /// </summary>
-    /// <value>
-    /// The instance of the AmiiboDataBase.
-    /// </value>
-    public static DBRootobjectInstance BRootobject => lazy.Value;
-    private static string inputPath;
-    private static string outputPath = @"games_info.json";
-    private static int parallelism = 4;
-    private static readonly Dictionary<Hex, Games> export = new();
+	public static async Task<int> Main(string[] args)
+	{
+		ConsoleLogger consoleLogger = new();
+		_logger = consoleLogger;
 
-    public static async Task<string> GetAmiilifeStringAsync(string url, int attempts = 5)
-    {
-        var handleError = new Func<int, string, Task<bool>>(async (attempt, message) =>
-        {
-            Debugger.Log(message, Debugger.DebugLevel.Error);
+		AppConfig config;
+		try
+		{
+			config = ParseArguments(args, consoleLogger);
+			consoleLogger.CurrentLogLevel = config.LoggingLevel;
+		}
+		catch (ArgumentException ex)
+		{
+			_logger.Log(ex.Message, LogLevel.Error);
+			PrintUsage();
+			return (int)ExitCode.ArgumentError;
+		}
 
-            if (attempt >= (attempts - 1))
-            {
-                return true;
-            }
+		_logger.Log("Application starting...");
 
-            var delay = (attempt + 1) * 5000;
-            Debugger.Log($"Retrying in {delay / 1000} seconds", Debugger.DebugLevel.Verbose);
-            await Task.Delay(delay);
+		HttpService httpService = new(_logger);
+		AmiiboJsonModel amiiboDb;
 
-            return false;
-        });
+		try
+		{
+			amiiboDb = await LoadAmiiboDatabaseAsync(config.InputAmiiboDbPath, httpService);
+		}
+		catch (Exception ex)
+		{
+			_logger.Log($"Critical error loading Amiibo database: {ex.Message}", LogLevel.Error);
+			return (int)ExitCode.DatabaseLoadingError;
+		}
 
-        // Attempt to load the html up to 5 times when encountering a WebException
-        for (int i = 0; i < attempts; i++)
-        {
-            try
-            {
-                return await client.GetStringAsync(url);
-            }
-            catch (WebException ex)
-            {
-                if (handleError(i, $"({i + 1}/{attempts}) Error while loading {url}\n{ex.Message}").Result)
-                {
-                    throw;
-                }
-            }
-            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
-            {
-                if (handleError(i, $"({i + 1}/{attempts}) Timeout error while loading {url}\n{ex.Message}").Result)
-                {
-                    throw;
-                }
-            }
-            catch (HttpRequestException ex) when (ex.StatusCode.HasValue && (int)ex.StatusCode > 499 && (int)ex.StatusCode < 600)
-            {
-                if (handleError(i, $"({i + 1}/{attempts}) HTTP {(int)ex.StatusCode} error while loading {url}\n{ex.Message}").Result)
-                {
-                    throw;
-                }
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
+		GameDataService gameDataService = new(_logger, httpService);
+		try
+		{
+			await gameDataService.LoadAllGameDataAsync();
+		}
+		catch (Exception ex)
+		{
+			_logger.Log($"Critical error loading game databases: {ex.Message}", LogLevel.Error);
+			return (int)ExitCode.DatabaseLoadingError;
+		}
 
-        throw new Exception("Error occurred in Program.GetAmiilifeStringAsync.  This should never be reached.");
-    }
+		_logger.Log("All databases loaded successfully.");
 
-    /// <summary>
-    /// Mains this instance.
-    /// </summary>
-    /// <returns></returns>
-    /// <exception cref="XmlSerializer">typeof(Switchreleases)</exception>
-    public static int Main(string[] args)
-    {
-        ParseArguments(args);
+		AmiiboDataService amiiboDataService = new(amiiboDb, httpService, _logger);
+		AmiiboInfoCollectorService amiiboInfoCollector = new(httpService, _logger, gameDataService, amiiboDataService);
 
-        // Load Regex for removing copyrights, trademarks, etc.
-        Regex rx = new(@"[®™]", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+		Dictionary<string, GameCompatibility> processedAmiibos = [];
+		List<string> missingGameTracker = [];
 
-        // Load amiibo data
-        Debugger.Log("Loading amiibo");
-        try
-        {
-            string amiiboJSON = default;
-            if (string.IsNullOrEmpty(inputPath))
-            {
-                Debugger.Log("Downloading amiibo database", Debugger.DebugLevel.Verbose);
-                try
-                {
-                    amiiboJSON = Program.client.GetStringAsync("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json").Result;
-                }
-                catch (Exception e)
-                {
-                    Debugger.Log("Error while downloading amiibo.json, please check internet:\n" + e.Message, Debugger.DebugLevel.Error);
-                    Environment.Exit((int)Debugger.ReturnType.InternetError);
-                }
-            }
-            else
-            {
-                amiiboJSON = File.ReadAllText(inputPath);
-            }
+		int amiiboCounter = 0;
+		int totalAmiiboCount = amiiboDb.Amiibos.Count;
 
-            Debugger.Log("Processing amiibo database", Debugger.DebugLevel.Verbose);
-            BRootobject.rootobject = JsonConvert.DeserializeObject<DBRootobject>(amiiboJSON);
+		_logger.Log($"Processing {totalAmiiboCount} Amiibo entries...");
 
-            foreach (KeyValuePair<Hex, DBAmiibo> entry in BRootobject.rootobject.amiibos)
-            {
-                entry.Value.ID = entry.Key;
-            }
-        }
-        catch (Exception ex)
-        {
-            Debugger.Log("Error loading amiibo.json:\n" + ex.Message, Debugger.DebugLevel.Error);
-            Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
-        }
+		List<Task> tasks = [];
+		SemaphoreSlim semaphore = new(config.MaxParallelism);
 
-        // Load Wii U games
-        Debugger.Log("Loading Wii U games");
-        Debugger.Log("Processing Wii U database", Debugger.DebugLevel.Verbose);
-        try
-        {
-            Games.WiiUGames = JsonConvert.DeserializeObject<List<GameInfo>>(Properties.Resources.WiiU);
-        }
-        catch (Exception ex)
-        {
-            Debugger.Log("Error loading Wii U games:\n" + ex.Message, Debugger.DebugLevel.Error);
-            Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
-        }
+		foreach (KeyValuePair<string, AmiiboEntry> amiiboEntryPair in amiiboDb.Amiibos)
+		{
+			await semaphore.WaitAsync();
 
-        // Load 3DS games
-        Debugger.Log("Loading 3DS games");
-        try
-        {
-            byte[] DSDatabase = default;
-            try
-            {
-                Debugger.Log("Downloading 3DS database", Debugger.DebugLevel.Verbose);
-                DSDatabase = Program.client.GetByteArrayAsync("http://3dsdb.com/xml.php").Result;
-            }
-            catch (Exception ex)
-            {
-                Debugger.Log("Error while downloading 3DS database, please check internet:\n" + ex.Message, Debugger.DebugLevel.Error);
-                Environment.Exit((int)Debugger.ReturnType.InternetError);
-            }
+			tasks.Add(Task.Run(async () =>
+			{
+				try
+				{
+					AmiiboDetails amiiboDetails = amiiboDataService.GetAmiiboDetails(amiiboEntryPair.Value);
+					GameCompatibility gameCompat = await amiiboInfoCollector.CollectGameCompatibilityAsync(amiiboDetails, missingGameTracker);
 
-            Debugger.Log("Processing 3DS database", Debugger.DebugLevel.Verbose);
-            XmlSerializer serializer = new(typeof(DSreleases));
-            using MemoryStream stream = new(DSDatabase);
-            Games.DSGames = ((DSreleases)serializer.Deserialize(stream)).release.ToList();
-        }
-        catch (Exception ex)
-        {
-            Debugger.Log("Error loading 3DS games:\n" + ex.Message, Debugger.DebugLevel.Error);
-            Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
-        }
+					lock (processedAmiibos)
+					{
+						processedAmiibos.Add(amiiboEntryPair.Key, gameCompat);
+					}
 
-        // Load Switch games
-        Debugger.Log("Loading Switch games");
-        try
-        {
-            string BlawarDatabase = default;
-            // Try loading the database
-            Debugger.Log("Downloading Switch database", Debugger.DebugLevel.Verbose);
-            try
-            {
-                BlawarDatabase = Program.client.GetStringAsync("https://raw.githubusercontent.com/blawar/titledb/master/US.en.json").Result;
-            }
-            catch (Exception ex)
-            {
-                Debugger.Log("Error while downloading switch database, please check internet:\n" + ex.Message, Debugger.DebugLevel.Error);
-                Environment.Exit((int)Debugger.ReturnType.InternetError);
-            }
+					Interlocked.Increment(ref amiiboCounter);
+					_logger.Log($"{amiiboCounter:D3}/{totalAmiiboCount} Processed: {amiiboDetails.OriginalName} ({amiiboDetails.AmiiboSeries})");
+				}
+				catch (HttpRequestException netEx)
+				{
+					_logger.Log($"Network error processing Amiibo {amiiboEntryPair.Value.Name}: {netEx.Message}. This Amiibo might be skipped.", LogLevel.Error);
+				}
+				catch (Exception ex)
+				{
+					_logger.Log($"Unexpected error processing Amiibo {amiiboEntryPair.Value.Name}: {ex.Message}", LogLevel.Error);
+				}
+				finally
+				{
+					semaphore.Release();
+				}
+			}));
+		}
 
-            Debugger.Log("Processing Switch database", Debugger.DebugLevel.Verbose);
-            // Parse the loaded JSON
-            Games.SwitchGames = (Lookup<string, string>)JsonConvert.DeserializeObject<Dictionary<Hex, SwitchGame>>(BlawarDatabase)
-                // Make KeyValuePairs to turn into a Lookup and decode the HTML encoded name
-                .Select(x => new KeyValuePair<string, string>(HttpUtility.HtmlDecode(x.Value.name), x.Value.id)).Where(y => y.Value != null)
-                // Convert to Lookup for faster searching while allowing multiple values per key and apply regex
-                .ToLookup(x => rx.Replace(x.Key, "").Replace('’', '\'').ToLower(), x => x.Value);
-        }
-        catch (Exception ex)
-        {
-            Debugger.Log("Error loading Switch games:\n" + ex.Message, Debugger.DebugLevel.Error);
-            Environment.Exit((int)Debugger.ReturnType.DatabaseLoadingError);
-        }
+		await Task.WhenAll(tasks);
 
-        Debugger.Log("Done loading!");
+		_logger.Log("Amiibo processing complete.");
 
-        // List to keep track of missing games
-        Games.missingGames = new();
+		AmiiboGameSet outputData = new()
+		{
+			Amiibos = processedAmiibos.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+		};
 
-        // Counter to keep track of how many amiibo we've done
-        int AmiiboCounter = 0;
-        int TotalAmiibo = BRootobject.rootobject.amiibos.Count;
+		try
+		{
+			string jsonOutput = JsonSerializer.Serialize(outputData, jsonOptions);
+			File.WriteAllText(config.OutputFilePath, jsonOutput.Replace("  ", "\t"));
+			_logger.Log($"Output successfully written to {config.OutputFilePath}");
+		}
+		catch (Exception ex)
+		{
+			_logger.Log($"Error writing output JSON: {ex.Message}", LogLevel.Error);
+			return (int)ExitCode.UnknownError;
+		}
 
-        Debugger.Log("Processing amiibo");
-        // Iterate over all amiibo and get game info
-        _ = Parallel.ForEach(BRootobject.rootobject.amiibos, new ParallelOptions()
-        {
-            MaxDegreeOfParallelism = parallelism
-        }, (DBamiibo) =>
-        {
-            Games exportAmiibo = default;
-            try
-            {
-                exportAmiibo = ParseAmiibo(DBamiibo.Value);
-            }
-            catch (WebException ex)
-            {
-                Debugger.Log($"Internet error when processing {DBamiibo.Value.Name} ({DBamiibo.Value.OriginalName})\n{ex.Message}\n{DBamiibo.Value.URL}", Debugger.DebugLevel.Error);
-                Environment.Exit((int)Debugger.ReturnType.InternetError);
-            }
-            catch (Exception ex)
-            {
-                Debugger.Log($"Unexpected error when processing {DBamiibo.Value.Name} ({DBamiibo.Value.OriginalName})\n{ex.Message}", Debugger.DebugLevel.Error);
-                Environment.Exit((int)Debugger.ReturnType.UnknownError);
-            }
+		if (missingGameTracker.Count != 0)
+		{
+			_logger.Log("The following games could not find their Title IDs and were not fully processed:", LogLevel.Warn);
+			foreach (string game in missingGameTracker.Distinct().OrderBy(g => g))
+			{
+				_logger.Log($"\t- {game}", LogLevel.Warn);
+			}
 
-            lock (export)
-            {
-                export.Add(DBamiibo.Key, exportAmiibo);
-            }
+			return (int)ExitCode.SuccessWithErrors;
+		}
 
-            // Show which amiibo just got added
-            AmiiboCounter++;
-            Debugger.Log($"{AmiiboCounter:D3}/{TotalAmiibo} Done with {DBamiibo.Value.OriginalName} ({DBamiibo.Value.amiiboSeries})", Debugger.DebugLevel.Verbose);
-        });
+		_logger.Log("Application finished successfully.");
+		return (int)ExitCode.Success;
+	}
 
-        // Sort export object
-        var SortedAmiibos = new AmiiboKeyValue
-        {
-            amiibos = export.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-        };
+	private static async Task<AmiiboJsonModel> LoadAmiiboDatabaseAsync(string inputPath, HttpService httpService)
+	{
+		_logger.Log("Loading Amiibo database...");
+		string amiiboJson;
+		if (string.IsNullOrEmpty(inputPath))
+		{
+			_logger.Log("Downloading Amiibo database from N3evin/AmiiboAPI...", LogLevel.Verbose);
+			try
+			{
+				amiiboJson = await httpService.GetStringAsync("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json");
+			}
+			catch (Exception ex)
+			{
+				_logger.Log($"Error downloading amiibo.json: {ex.Message}", LogLevel.Error);
+				throw new InvalidOperationException("Failed to download amiibo.json.", ex);
+			}
+		}
+		else
+		{
+			_logger.Log($"Reading Amiibo database from local file: {inputPath}", LogLevel.Verbose);
+			try
+			{
+				amiiboJson = await File.ReadAllTextAsync(inputPath);
+			}
+			catch (Exception ex)
+			{
+				_logger.Log($"Error reading local amiibo.json from {inputPath}: {ex.Message}", LogLevel.Error);
+				throw new InvalidOperationException($"Failed to read local amiibo.json from {inputPath}.", ex);
+			}
+		}
 
-        // Write the SortedAmiibos to file as an tab-indented json
-        File.WriteAllText(outputPath, JsonConvert.SerializeObject(SortedAmiibos, Formatting.Indented).Replace("  ", "\t"));
+		_logger.Log("Processing Amiibo database...", LogLevel.Verbose);
+		try
+		{
+			AmiiboJsonModel db = JsonSerializer.Deserialize<AmiiboJsonModel>(amiiboJson);
+			if (db?.Amiibos == null)
+				throw new JsonException("Amiibo data is malformed or empty. Please check the input file or URL.");
 
-        // Inform we're done
-        Debugger.Log("\nDone generating the JSON!");
+			foreach (KeyValuePair<string, AmiiboEntry> kvp in db.Amiibos)
+			{
+				kvp.Value.Id = kvp.Key;
+			}
 
-        // Show missing games
-        if (Games.missingGames.Count != 0)
-        {
-            Debugger.Log("However, the following games couldn't find their titleids and thus couldn't be added:", Debugger.DebugLevel.Warn);
-            foreach (string Game in Games.missingGames.Distinct())
-            {
-                Debugger.Log("\t" + Game, Debugger.DebugLevel.Warn);
-            }
+			return db;
+		}
+		catch (JsonException ex)
+		{
+			_logger.Log($"Error deserializing amiibo.json: {ex.Message}", LogLevel.Error);
+			throw new InvalidOperationException("Failed to parse amiibo.json.", ex);
+		}
+	}
 
-            return (int)Debugger.ReturnType.SuccessWithErrors;
-        }
-        else
-        {
-            return 0;
-        }
-    }
+	private static AppConfig ParseArguments(string[] args, ConsoleLogger tempLoggerForEarlyLogging)
+	{
+		AppConfig config = new();
+		if (args.Contains("-h") || args.Contains("--help") || args.Contains("/?"))
+		{
+			PrintUsage();
+			Environment.Exit((int)ExitCode.Success);
+		}
 
-    private static Games ParseAmiibo(DBAmiibo DBamiibo)
-    {
-        Games ExAmiibo = new();
+		tempLoggerForEarlyLogging.Log($"Running with arguments: {string.Join(' ', args)}", LogLevel.Verbose);
 
-        HtmlDocument htmlDoc = new();
+		for (int i = 0; i < args.Length; i++)
+		{
+			string currentArg = args[i].ToLowerInvariant();
+			switch (currentArg)
+			{
+				case "-i":
+				case "-input":
+					if (i + 1 < args.Length)
+					{
+						config.InputAmiiboDbPath = args[++i];
+						if (!File.Exists(config.InputAmiiboDbPath))
+							throw new ArgumentException($"Input file not found: {config.InputAmiiboDbPath}");
+					}
+					else
+						throw new ArgumentException("Missing value for input argument.");
+					break;
+				case "-o":
+				case "-output":
+					if (i + 1 < args.Length)
+					{
+						config.OutputFilePath = args[++i];
+						string dir = Path.GetDirectoryName(config.OutputFilePath);
+						if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+							Directory.CreateDirectory(dir);
+					}
+					else
+						throw new ArgumentException("Missing value for output argument.");
+					break;
+				case "-p":
+				case "-parallelism":
+					config.MaxParallelism = i + 1 < args.Length && int.TryParse(args[++i], out int pValue) && pValue > 0
+						? pValue
+						: throw new ArgumentException("Invalid value for parallelism argument. Must be a positive integer.");
+					break;
+				case "-l":
+				case "-log":
+					config.LoggingLevel = i + 1 < args.Length && Enum.TryParse(args[++i], true, out LogLevel logLevel)
+						? logLevel
+						: throw new ArgumentException("Invalid value for log level argument. Valid values: Verbose, Info, Warn, Error.");
+					break;
+				default:
+					throw new ArgumentException($"Unknown argument: {args[i]}");
+			}
+		}
 
-        htmlDoc.LoadHtml(
-            WebUtility.HtmlDecode(
-                Program.GetAmiilifeStringAsync(DBamiibo.URL).Result
-            )
-        );
+		tempLoggerForEarlyLogging.Log("Arguments parsed.", LogLevel.Verbose);
+		return config;
+	}
 
-        // Get the games panel
-        HtmlNodeCollection GamesPanel = htmlDoc.DocumentNode.SelectNodes("//*[@class='games panel']/a");
-        if (GamesPanel.Count == 0)
-        {
-            Debugger.Log("No games found for " + DBamiibo.Name, Debugger.DebugLevel.Verbose);
-        }
-
-        // Iterate over each game in the games panel
-        foreach (HtmlNode node in GamesPanel)
-        {
-            // Get the name of the game
-            Game game = new()
-            {
-                gameName = node.SelectSingleNode(".//*[@class='name']/text()[normalize-space()]").InnerText.Trim().Replace("Poochy & ", "").Trim().Replace("Ace Combat Assault Horizon Legacy +", "Ace Combat Assault Horizon Legacy+").Replace("Power Pros", "Jikkyou Powerful Pro Baseball"),
-                gameID = new(),
-                amiiboUsage = new()
-            };
-
-            // Get the amiibo usages
-            foreach (HtmlNode amiiboUsage in node.SelectNodes(".//*[@class='features']/li"))
-            {
-                game.amiiboUsage.Add(new()
-                {
-                    Usage = amiiboUsage.GetDirectInnerText().Trim(),
-                    write = amiiboUsage.SelectSingleNode("em")?.InnerText == "(Read+Write)"
-                });
-            }
-
-            // Sort amiiboUsage alphabetically by Usage
-            game.amiiboUsage.Sort((x, y) => string.Compare(x.Usage, y.Usage, StringComparison.OrdinalIgnoreCase));
-
-            if (DBamiibo.Name == "Shadow Mewtwo")
-            {
-                game.gameName = "Pokkén Tournament";
-            }
-
-            // Add game to the correct console and get correct titleid
-            Regex rgx = new("[^a-zA-Z0-9 -]");
-            switch (node.SelectSingleNode(".//*[@class='name']/span").InnerText.Trim().ToLower())
-            {
-                case "switch":
-                    try
-                    {
-                        game.gameID = Games.SwitchGames[game.sanatizedGameName.ToLower()].ToList();
-
-                        if (game.gameID.Count == 0)
-                        {
-                            game.gameID = game.sanatizedGameName switch
-                            {
-                                "Cyber Shadow" => new() { "0100C1F0141AA000" },
-                                "Jikkyou Powerful Pro Baseball" => new() { "0100E9C00BF28000" },
-                                "Shovel Knight Pocket Dungeon" => new() { "01006B00126EC000" },
-                                "Shovel Knight Showdown" => new() { "0100B380022AE000" },
-                                "Super Kirby Clash" => new() { "01003FB00C5A8000" },
-                                "The Legend of Zelda: Echoes of Wisdom" => new() { "01008CF01BAAC000" },
-                                "The Legend of Zelda: Skyward Sword HD" => new() { "01002DA013484000" },
-                                "Yu-Gi-Oh! Rush Duel Saikyo Battle Royale" => new() { "01003C101454A000" },
-                                _ => throw new Exception()
-                            };
-                        }
-
-                        game.gameID = game.gameID.Order().Distinct().ToList();
-                        lock (ExAmiibo.gamesSwitch)
-                        {
-                            ExAmiibo.gamesSwitch.Add(game);
-                        }
-                    }
-                    catch
-                    {
-                        lock (Games.missingGames)
-                        {
-                            Games.missingGames.Add(game.gameName + " (Switch)");
-                        }
-                    }
-
-                    break;
-                case "wii u":
-                    try
-                    {
-                        string[] gameIDs = Games.WiiUGames.Find(WiiUGame => WiiUGame.Name.Contains(game.gameName, StringComparer.OrdinalIgnoreCase))?.Ids;
-                        if (gameIDs?.Length == 0 || gameIDs == null)
-                        {
-                            game.gameID = game.gameName switch
-                            {
-                                "Shovel Knight Showdown" => new() { "000500001016E100", "0005000010178F00", "0005000E1016E100", "0005000E10178F00", "0005000E101D9300" },
-                                _ => throw new Exception()
-                            };
-                        }
-                        else
-                        {
-                            foreach (string ID in gameIDs)
-                            {
-                                game.gameID.Add(ID[..16]);
-                            }
-                        }
-
-                        game.gameID = game.gameID.Order().Distinct().ToList();
-
-                        lock (ExAmiibo.gamesWiiU)
-                        {
-                            ExAmiibo.gamesWiiU.Add(game);
-                        }
-                    }
-                    catch
-                    {
-                        lock (Games.missingGames)
-                        {
-                            Games.missingGames.Add(game.gameName + " (Wii U)");
-                        }
-                    }
-
-                    break;
-                case "3ds":
-                    try
-                    {
-                        List<DSreleasesRelease> games = Games.DSGames.FindAll(DSGame => rgx.Replace(WebUtility.HtmlDecode(DSGame.name).ToLower(), "").Contains(rgx.Replace(game.gameName.ToLower(), "")));
-                        if (games.Count == 0)
-                        {
-                            game.gameID = game.gameName switch
-                            {
-                                "Style Savvy: Styling Star" => new() { "00040000001C2500" },
-                                "Metroid Prime: Blast Ball" => new() { "0004000000175300" },
-                                "Mini Mario & Friends amiibo Challenge" => new() { "000400000016C300", "000400000016C200" },
-                                "Team Kirby Clash Deluxe" => new() { "00040000001AB900", "00040000001AB800" },
-                                "Kirby's Extra Epic Yarn" => new() { "00040000001D1F00" },
-                                "Kirby's Blowout Blast" => new() { "0004000000196F00" },
-                                "BYE-BYE BOXBOY!" => new() { "00040000001B5400", "00040000001B5300" },
-                                "Azure Striker Gunvolt 2" => new() { "00040000001A6E00" },
-                                "niconico app" => new() { "0005000010116400" },
-                                _ => throw new Exception(),
-                            };
-                        }
-
-                        games.ForEach(DSGame =>
-                            game.gameID.Add(DSGame.titleid[..16]));
-
-                        game.gameID = game.gameID.Order().Distinct().ToList();
-
-                        lock (ExAmiibo.games3DS)
-                        {
-                            ExAmiibo.games3DS.Add(game);
-                        }
-                    }
-                    catch
-                    {
-                        lock (Games.missingGames)
-                        {
-                            Games.missingGames.Add(game.gameName + " (3DS)");
-                        }
-                    }
-
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        // Sort all gamelists
-        ExAmiibo.gamesSwitch.Sort((x, y) => string.Compare(x.gameName, y.gameName, StringComparison.OrdinalIgnoreCase));
-        ExAmiibo.gamesWiiU.Sort((x, y) => string.Compare(x.gameName, y.gameName, StringComparison.OrdinalIgnoreCase));
-        ExAmiibo.games3DS.Sort((x, y) => string.Compare(x.gameName, y.gameName, StringComparison.OrdinalIgnoreCase));
-
-        // Return the created amiibo
-        return ExAmiibo;
-    }
-
-    private static void ParseArguments(string[] args)
-    {
-        if (args.Length != 0)
-        {
-            Debugger.Log($"Running with these arguments: {string.Join(' ', args)}");
-
-            // Show help message
-            if (args.Contains("-h") || args.Contains("-help"))
-            {
-                StringBuilder sB = new();
-                _ = sB.AppendLine("Usage:");
-                _ = sB.AppendLine("-i | -input {filepath} to specify input json location");
-                _ = sB.AppendLine("-o | -output {filepath} to specify output json location");
-                _ = sB.AppendLine("-p | -parallelism {value} to specify the max degree of parallelism");
-                _ = sB.AppendLine("-l | -log {value} to set the logging level, can pick from verbose, info, warn, error or from 0 to 3 respectively");
-                _ = sB.AppendLine("-h | -help to show this message");
-                Debugger.Log(sB.ToString());
-                Environment.Exit(0);
-            }
-        }
-
-        Debugger.CurrentDebugLevel = Debugger.DebugLevel.Info;
-
-        // Loop through arguments
-        for (int i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "-i":
-                case "-input":
-                    if (File.Exists(args[i + 1]) || args.Contains("-i"))
-                    {
-                        inputPath = args[i + 1];
-                        i++;
-                        continue;
-                    }
-                    else
-                    {
-                        throw new FileNotFoundException($"Input file '{args[i + 1]}' not found");
-                    }
-                case "-o":
-                case "-output":
-                    if (Directory.Exists(Path.GetDirectoryName(args[i + 1])))
-                    {
-                        outputPath = args[i + 1];
-                        i++;
-                        continue;
-                    }
-                    else
-                    {
-                        throw new DirectoryNotFoundException($"Input directory '{args[i + 1]}' not found");
-                    }
-                case "-p":
-                case "-parallelism":
-                    parallelism = int.Parse(args[i + 1]);
-                    continue;
-
-                case "-l":
-                case "-log":
-                    if (Enum.TryParse(args[i + 1], true, out Debugger.DebugLevel debugLevel) && Enum.IsDefined(typeof(Debugger.DebugLevel), debugLevel))
-                    {
-                        Debugger.CurrentDebugLevel = debugLevel;
-                        Debugger.Log($"Setting DebugLevel to {Enum.GetName(typeof(Debugger.DebugLevel), debugLevel)}", Debugger.DebugLevel.Verbose);
-                        i++;
-                        continue;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Incorrect debug level passed: {args[i + 1]}");
-                    }
-                default:
-                    break;
-            }
-        }
-
-        Debugger.Log("Done parsing arguments", Debugger.DebugLevel.Verbose);
-        Debugger.Log(default);
-    }
+	private static void PrintUsage()
+	{
+		StringBuilder sb = new();
+		sb.AppendLine("Amiibo Game List Generator");
+		sb.AppendLine("Usage: AmiiboGameList.exe [options]");
+		sb.AppendLine("Options:");
+		sb.AppendLine("  -i, --input {filepath}    Specify local amiibo.json database path. (Optional, downloads if not provided)");
+		sb.AppendLine("  -o, --output {filepath}   Specify output JSON file path. (Default: games_info.json)");
+		sb.AppendLine("  -p, --parallelism {value} Specify max degree of parallelism for processing. (Default: 4)");
+		sb.AppendLine("  -l, --log {level}         Set logging level (Verbose, Info, Warn, Error). (Default: Info)");
+		sb.AppendLine("  -h, --help                Show this help message.");
+		_logger.Log(sb.ToString());
+	}
 }
