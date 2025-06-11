@@ -6,16 +6,16 @@ namespace AmiiboGameList.Models.PlatformSpecific;
 [XmlRoot("releases")]
 public class ThreeDsReleaseList
 {
-	[XmlElement("release")]
-	public ThreeDsRelease[] Releases { get; set; }
+    [XmlElement("release")]
+    public ThreeDsRelease[] Releases { get; set; }
 }
 
 [Serializable]
 public class ThreeDsRelease
 {
-	[XmlElement("name")]
-	public string Name { get; set; }
+    [XmlElement("name")]
+    public string Name { get; set; }
 
-	[XmlElement("titleid")]
-	public string TitleId { get; set; }
+    [XmlElement("titleid")]
+    public string TitleId { get; set; }
 }

@@ -4,9 +4,9 @@ namespace AmiiboGameList.Models.PlatformSpecific;
 
 public class WiiUGameInfo
 {
-	[JsonPropertyName("Name")]
-	public string[] Names { get; set; }
+    [JsonPropertyName("Name")]
+    public string[] Names { get; set; }
 
-	[JsonPropertyName("Ids")]
-	public string[] Ids { get; set; }
+    [JsonPropertyName("Ids")]
+    public string[] Ids { get; set; }
 }
