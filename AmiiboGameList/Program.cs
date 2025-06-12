@@ -2,7 +2,6 @@
 using AmiiboGameList.Services;
 using AmiiboGameList.Utility;
 
-using System.Text;
 using System.Text.Json;
 
 namespace AmiiboGameList;
@@ -35,13 +34,13 @@ public class Program
         AppConfig config;
         try
         {
-            config = ParseArguments(args, consoleLogger);
+            config = CommandLineParser.ParseArguments(args, consoleLogger);
             consoleLogger.CurrentLogLevel = config.LoggingLevel;
         }
         catch (ArgumentException ex)
         {
             _logger.Log(ex.Message, LogLevel.Error);
-            PrintUsage();
+            CommandLineParser.PrintUsage(_logger);
             return (int)ExitCode.ArgumentError;
         }
 
@@ -52,7 +51,7 @@ public class Program
 
         try
         {
-            amiiboDb = await LoadAmiiboDatabaseAsync(config.InputAmiiboDbPath, httpService);
+            amiiboDb = await AmiiboDatabaseLoader.LoadAmiiboDatabaseAsync(config.InputAmiiboDbPath, httpService, _logger);
         }
         catch (Exception ex)
         {
@@ -155,146 +154,5 @@ public class Program
 
         _logger.Log("Application finished successfully.");
         return (int)ExitCode.Success;
-    }
-
-    /// <summary>
-    /// Loads the Amiibo database from a specified local file or a remote URL.
-    /// </summary>
-    /// <remarks>If <paramref name="inputPath"/> is provided, the method attempts to read the Amiibo database
-    /// from the specified file. Otherwise, it downloads the database from the default URL. The method validates and
-    /// processes the JSON data to ensure it is correctly formatted and assigns unique IDs to each Amiibo
-    /// entry.</remarks>
-    /// <param name="inputPath">The path to the local file containing the Amiibo database in JSON format. If null or empty, the database will be
-    /// downloaded from the default remote URL.</param>
-    /// <param name="httpService">An instance of <see cref="HttpService"/> used to download the Amiibo database when <paramref name="inputPath"/>
-    /// is not provided.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains an <see cref="AmiiboJsonModel"/> 
-    /// object representing the loaded Amiibo database.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the database cannot be downloaded from the remote URL, the local file cannot be read, or the JSON data
-    /// is malformed or empty.</exception>
-    public static async Task<AmiiboJsonModel> LoadAmiiboDatabaseAsync(string inputPath, HttpService httpService)
-    {
-        _logger.Log("Loading Amiibo database...");
-        string amiiboJson;
-        if (string.IsNullOrEmpty(inputPath))
-        {
-            _logger.Log("Downloading Amiibo database from N3evin/AmiiboAPI...", LogLevel.Verbose);
-            try
-            {
-                amiiboJson = await httpService.GetStringAsync("https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json");
-            }
-            catch (Exception ex)
-            {
-                _logger.Log($"Error downloading amiibo.json: {ex.Message}", LogLevel.Error);
-                throw new InvalidOperationException("Failed to download amiibo.json.", ex);
-            }
-        }
-        else
-        {
-            _logger.Log($"Reading Amiibo database from local file: {inputPath}", LogLevel.Verbose);
-            try
-            {
-                amiiboJson = await File.ReadAllTextAsync(inputPath);
-            }
-            catch (Exception ex)
-            {
-                _logger.Log($"Error reading local amiibo.json from {inputPath}: {ex.Message}", LogLevel.Error);
-                throw new InvalidOperationException($"Failed to read local amiibo.json from {inputPath}.", ex);
-            }
-        }
-
-        _logger.Log("Processing Amiibo database...", LogLevel.Verbose);
-        try
-        {
-            AmiiboJsonModel db = JsonSerializer.Deserialize<AmiiboJsonModel>(amiiboJson);
-            if (db?.Amiibos == null)
-                throw new JsonException("Amiibo data is malformed or empty. Please check the input file or URL.");
-
-            foreach (KeyValuePair<string, AmiiboEntry> kvp in db.Amiibos)
-            {
-                kvp.Value.Id = kvp.Key;
-            }
-
-            return db;
-        }
-        catch (JsonException ex)
-        {
-            _logger.Log($"Error deserializing amiibo.json: {ex.Message}", LogLevel.Error);
-            throw new InvalidOperationException("Failed to parse amiibo.json.", ex);
-        }
-    }
-
-    private static AppConfig ParseArguments(string[] args, ConsoleLogger tempLoggerForEarlyLogging)
-    {
-        AppConfig config = new();
-        if (args.Contains("-h") || args.Contains("--help") || args.Contains("/?"))
-        {
-            PrintUsage();
-            Environment.Exit((int)ExitCode.Success);
-        }
-
-        tempLoggerForEarlyLogging.Log($"Running with arguments: {string.Join(' ', args)}", LogLevel.Verbose);
-
-        for (int i = 0; i < args.Length; i++)
-        {
-            string currentArg = args[i].ToLowerInvariant();
-            switch (currentArg)
-            {
-                case "-i":
-                case "-input":
-                    if (i + 1 < args.Length)
-                    {
-                        config.InputAmiiboDbPath = args[++i];
-                        if (!File.Exists(config.InputAmiiboDbPath))
-                            throw new ArgumentException($"Input file not found: {config.InputAmiiboDbPath}");
-                    }
-                    else
-                        throw new ArgumentException("Missing value for input argument.");
-                    break;
-                case "-o":
-                case "-output":
-                    if (i + 1 < args.Length)
-                    {
-                        config.OutputFilePath = args[++i];
-                        string dir = Path.GetDirectoryName(config.OutputFilePath);
-                        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                            Directory.CreateDirectory(dir);
-                    }
-                    else
-                        throw new ArgumentException("Missing value for output argument.");
-                    break;
-                case "-p":
-                case "-parallelism":
-                    config.MaxParallelism = i + 1 < args.Length && int.TryParse(args[++i], out int pValue) && pValue > 0
-                        ? pValue
-                        : throw new ArgumentException("Invalid value for parallelism argument. Must be a positive integer.");
-                    break;
-                case "-l":
-                case "-log":
-                    config.LoggingLevel = i + 1 < args.Length && Enum.TryParse(args[++i], true, out LogLevel logLevel)
-                        ? logLevel
-                        : throw new ArgumentException("Invalid value for log level argument. Valid values: Verbose, Info, Warn, Error.");
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown argument: {args[i]}");
-            }
-        }
-
-        tempLoggerForEarlyLogging.Log("Arguments parsed.", LogLevel.Verbose);
-        return config;
-    }
-
-    private static void PrintUsage()
-    {
-        StringBuilder sb = new();
-        sb.AppendLine("Amiibo Game List Generator");
-        sb.AppendLine("Usage: AmiiboGameList.exe [options]");
-        sb.AppendLine("Options:");
-        sb.AppendLine("  -i, --input {filepath}    Specify local amiibo.json database path. (Optional, downloads if not provided)");
-        sb.AppendLine("  -o, --output {filepath}   Specify output JSON file path. (Default: games_info.json)");
-        sb.AppendLine("  -p, --parallelism {value} Specify max degree of parallelism for processing. (Default: 4)");
-        sb.AppendLine("  -l, --log {level}         Set logging level (Verbose, Info, Warn, Error). (Default: Info)");
-        sb.AppendLine("  -h, --help                Show this help message.");
-        _logger.Log(sb.ToString());
     }
 }

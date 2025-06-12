@@ -19,6 +19,14 @@ public class ConsoleLogger : ILogger
     public LogLevel CurrentLogLevel { get; set; } = LogLevel.Info;
     private readonly object _lock = new();
 
+    /// <summary>
+    /// Logs a message to the console with the specified severity level.
+    /// </summary>
+    /// <remarks>The message is logged only if the specified severity level is greater than or equal to the
+    /// current log level. The console text color is adjusted based on the severity level to visually distinguish log
+    /// messages.</remarks>
+    /// <param name="message">The message to log. Cannot be null or empty.</param>
+    /// <param name="severity">The severity level of the log message. Defaults to <see cref="LogLevel.Info"/> if not specified.</param>
     public void Log(string message, LogLevel severity = LogLevel.Info)
     {
         if (severity >= CurrentLogLevel)
