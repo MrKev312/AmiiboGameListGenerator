@@ -16,11 +16,9 @@ runs:
         dotnet-version: 8.x
 
     - name: Restore dependencies
-      working-directory: AmiiboGameList
       shell: bash
       run: dotnet restore
 
     - name: Build
-      working-directory: AmiiboGameList
       shell: bash
       run: dotnet build --no-restore
