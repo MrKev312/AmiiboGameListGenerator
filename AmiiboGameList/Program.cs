@@ -157,7 +157,22 @@ public class Program
         return (int)ExitCode.Success;
     }
 
-    private static async Task<AmiiboJsonModel> LoadAmiiboDatabaseAsync(string inputPath, HttpService httpService)
+    /// <summary>
+    /// Loads the Amiibo database from a specified local file or a remote URL.
+    /// </summary>
+    /// <remarks>If <paramref name="inputPath"/> is provided, the method attempts to read the Amiibo database
+    /// from the specified file. Otherwise, it downloads the database from the default URL. The method validates and
+    /// processes the JSON data to ensure it is correctly formatted and assigns unique IDs to each Amiibo
+    /// entry.</remarks>
+    /// <param name="inputPath">The path to the local file containing the Amiibo database in JSON format. If null or empty, the database will be
+    /// downloaded from the default remote URL.</param>
+    /// <param name="httpService">An instance of <see cref="HttpService"/> used to download the Amiibo database when <paramref name="inputPath"/>
+    /// is not provided.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains an <see cref="AmiiboJsonModel"/> 
+    /// object representing the loaded Amiibo database.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the database cannot be downloaded from the remote URL, the local file cannot be read, or the JSON data
+    /// is malformed or empty.</exception>
+    public static async Task<AmiiboJsonModel> LoadAmiiboDatabaseAsync(string inputPath, HttpService httpService)
     {
         _logger.Log("Loading Amiibo database...");
         string amiiboJson;

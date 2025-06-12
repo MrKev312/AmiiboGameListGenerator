@@ -7,8 +7,30 @@ using System.Net;
 
 namespace AmiiboGameList.Services;
 
+/// <summary>
+/// Provides functionality to collect and process game compatibility information for a given Amiibo.
+/// </summary>
+/// <remarks>This service interacts with external data sources to retrieve compatibility details for an Amiibo,
+/// including supported games across various platforms. It processes the retrieved data and organizes it into a
+/// structured format for further use. The service also logs relevant information and errors encountered during the data
+/// collection process.</remarks>
+/// <param name="httpService">An instance of <see cref="IHttpService"/> for making HTTP requests to retrieve Amiibo data.</param>
+/// <param name="logger">An instance of <see cref="ILogger"/> for logging operations and errors.</param>
+/// <param name="gameDataService">An instance of <see cref="GameDataService"/> for querying game IDs based on game names.</param>
+/// <param name="amiiboDataService">An instance of <see cref="AmiiboDataService"/> for resolving Amiibo-specific URLs and details.</param>
 public class AmiiboInfoCollectorService(IHttpService httpService, ILogger logger, GameDataService gameDataService, AmiiboDataService amiiboDataService)
 {
+    /// <summary>
+    /// Collects game compatibility information for a given Amiibo and organizes it by platform.
+    /// </summary>
+    /// <remarks>This method retrieves game compatibility data by scraping the Amiibo's associated webpage. 
+    /// If the Amiibo is an Animal Crossing card, a specific URL resolution is performed before scraping. The method
+    /// handles cases where no compatibility information is found or where the HTML content  cannot be retrieved,
+    /// logging relevant details in such scenarios.</remarks>
+    /// <param name="amiiboDetails">The details of the Amiibo for which to collect game compatibility information.</param>
+    /// <param name="missingGameTracker">A list to track games that could not be assigned to a specific platform.</param>
+    /// <returns>A <see cref="GameCompatibility"/> object containing the games compatible with the specified Amiibo,  categorized
+    /// by platform.</returns>
     public async Task<GameCompatibility> CollectGameCompatibilityAsync(AmiiboDetails amiiboDetails, List<string> missingGameTracker)
     {
         GameCompatibility gameCompatibility = new();

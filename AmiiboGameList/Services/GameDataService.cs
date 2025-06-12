@@ -1,5 +1,4 @@
-﻿using AmiiboGameList.Models;
-using AmiiboGameList.Models.PlatformSpecific;
+﻿using AmiiboGameList.Models.PlatformSpecific;
 using AmiiboGameList.Utility;
 
 using System.Text.RegularExpressions;
@@ -9,9 +8,17 @@ using System.Xml.Serialization;
 
 namespace AmiiboGameList.Services;
 
+/// <summary>
+/// Provides functionality for loading and managing game data for Wii U, Nintendo 3DS, and Nintendo Switch platforms.
+/// </summary>
+/// <remarks>This service is responsible for asynchronously loading game data for supported platforms and
+/// providing methods to query game IDs based on game names. It maintains separate collections for Wii U, Nintendo 3DS,
+/// and Nintendo Switch games, and supports lookup operations for each platform. The service ensures that game data is
+/// loaded and processed correctly before it can be queried.</remarks>
+/// <param name="logger">An instance of <see cref="ILogger"/> for logging operations.</param>
+/// <param name="httpService">An instance of <see cref="IHttpService"/> for making HTTP requests to retrieve game data.</param>
 public partial class GameDataService(ILogger logger, IHttpService httpService)
 {
-
     public List<WiiUGameInfo> WiiUGames { get; private set; } = [];
     public List<ThreeDsRelease> ThreeDsGames { get; private set; } = [];
     public ILookup<string, string> SwitchGames { get; private set; } = Enumerable.Empty<string>().ToLookup(k => k, v => v);
@@ -19,12 +26,20 @@ public partial class GameDataService(ILogger logger, IHttpService httpService)
     private static readonly Regex NameCleanupRegex = MatchTrademarks();
     private static readonly Regex NonAlphaNumericDashRegex = MatchNonAlphaNumeric();
 
+    /// <summary>
+    /// Asynchronously loads all game data for supported platforms.
+    /// </summary>
+    /// <remarks>This method concurrently loads game data for Wii U, Nintendo 3DS, and Nintendo Switch
+    /// platforms. It ensures that all platform-specific game data is loaded before completing.</remarks>
+    /// <returns>A task that represents the asynchronous operation. The task completes when all game data has been loaded.</returns>
     public async Task LoadAllGameDataAsync()
     {
-        await LoadWiiUGamesAsync();
-        await LoadThreeDsGamesAsync();
-        await LoadSwitchGamesAsync();
-    }
+        await Task.WhenAll(
+            LoadWiiUGamesAsync(),
+            LoadThreeDsGamesAsync(),
+            LoadSwitchGamesAsync()
+        );
+	}
 
     private async Task LoadWiiUGamesAsync()
     {

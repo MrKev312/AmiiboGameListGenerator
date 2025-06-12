@@ -8,8 +8,28 @@ using System.Text.RegularExpressions;
 
 namespace AmiiboGameList.Services;
 
+/// <summary>
+/// Provides methods for retrieving and processing Amiibo data, including details about Amiibo characters, series,
+/// figure types, and generating URLs for Amiibo-related resources.
+/// </summary>
+/// <remarks>This service interacts with an underlying Amiibo database and supports operations such as normalizing
+/// Amiibo names, resolving character and series information, and generating URLs for Amiibo Life pages. It also
+/// includes functionality for resolving specific Amiibo card URLs asynchronously.</remarks>
+/// <param name="amiiboDb">An instance of <see cref="AmiiboJsonModel"/> representing the Amiibo database.</param>
+/// <param name="httpService">An instance of <see cref="IHttpService"/> for making HTTP requests to retrieve Amiibo data.</param>
+/// <param name="logger">An instance of <see cref="ILogger"/> for logging operations and errors.</param>
 public partial class AmiiboDataService(AmiiboJsonModel amiiboDb, IHttpService httpService, ILogger logger)
 {
+    /// <summary>
+    /// Retrieves detailed information about a specific Amiibo.
+    /// </summary>
+    /// <remarks>This method uses the provided <paramref name="amiiboEntry"/> to generate additional details
+    /// about the Amiibo,  such as its normalized name and associated metadata. The returned object includes factory
+    /// methods for  lazily computing certain properties, which may involve additional processing or data
+    /// retrieval.</remarks>
+    /// <param name="amiiboEntry">The Amiibo entry containing the basic information required to generate detailed data.</param>
+    /// <returns>An <see cref="AmiiboDetails"/> object containing detailed information about the specified Amiibo,  including its
+    /// normalized name, character, series, figure type, and related URL.</returns>
     public AmiiboDetails GetAmiiboDetails(AmiiboEntry amiiboEntry)
     {
         return new AmiiboDetails(
