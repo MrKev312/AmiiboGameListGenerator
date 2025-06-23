@@ -23,7 +23,15 @@ public sealed class Hex(ulong value) : IComparable<Hex>, IEquatable<Hex>
 
     public override string ToString() => "0x" + Value.ToString("x16");
 
-    public int CompareTo(Hex other)
+    public string ToHexSlice(int start, int length = 16)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(start);
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(start + length, 16);
+        return string.Concat("0x", Value.ToString("x16").AsSpan(start, length));
+	}
+
+	public int CompareTo(Hex other)
     {
         return other is null ? 1 : Value.CompareTo(other.Value);
     }

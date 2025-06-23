@@ -79,8 +79,8 @@ public partial class AmiiboDataService(AmiiboJsonModel amiiboDb, IHttpService ht
 
     private string GetCharacterName(Hex amiiboId)
     {
-        string characterKey = $"0x{amiiboId.ToString().Substring(2, 4)}";
-        if (!amiiboDb.Characters.TryGetValue(characterKey.ToLower(), out string characterName))
+        string characterKey = amiiboId.ToHexSlice(0, 4);
+		if (!amiiboDb.Characters.TryGetValue(characterKey.ToLower(), out string characterName))
         {
             logger.Log($"Character key {characterKey} not found for Amiibo ID {amiiboId}.", LogLevel.Warn);
             return "Unknown Character";
@@ -96,8 +96,8 @@ public partial class AmiiboDataService(AmiiboJsonModel amiiboDb, IHttpService ht
 
     private string GetAmiiboSeries(Hex amiiboId)
     {
-        string seriesKey = $"0x{amiiboId.ToString().Substring(14, 2)}";
-        if (!amiiboDb.AmiiboSeries.TryGetValue(seriesKey.ToLower(), out string amiiboSeries))
+        string seriesKey = amiiboId.ToHexSlice(12, 2);
+		if (!amiiboDb.AmiiboSeries.TryGetValue(seriesKey.ToLower(), out string amiiboSeries))
         {
             logger.Log($"Amiibo series key {seriesKey} not found for Amiibo ID {amiiboId}.", LogLevel.Warn);
             return "Unknown Series";
@@ -119,8 +119,8 @@ public partial class AmiiboDataService(AmiiboJsonModel amiiboDb, IHttpService ht
 
     private string GetFigureType(Hex amiiboId)
     {
-        string typeKey = $"0x{amiiboId.ToString().Substring(8, 2)}";
-        if (!amiiboDb.Types.TryGetValue(typeKey.ToLower(), out string figureType))
+        string typeKey = amiiboId.ToHexSlice(6, 2);
+		if (!amiiboDb.Types.TryGetValue(typeKey.ToLower(), out string figureType))
         {
             logger.Log($"Figure type key {typeKey} not found for Amiibo ID {amiiboId}.", LogLevel.Warn);
             return "Unknown Type";
